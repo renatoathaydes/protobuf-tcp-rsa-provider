@@ -1,9 +1,12 @@
 plugins {
     id 'java'
+    id 'maven'
     id "com.google.protobuf" version "0.8.3"
+    id "org.dm.bundle" version "0.10.0"
 }
 
 sourceCompatibility = 1.8
+description = 'TCP/Protobuffer implementation of Aries RSA DistributionProvider'
 
 dependencies {
     compile 'org.apache.aries.rsa:org.apache.aries.rsa.spi:1.11.0'
@@ -27,4 +30,19 @@ protobuf {
     protoc {
         artifact = 'com.google.protobuf:protoc:3.0.0'
     }
+}
+
+bundle {
+    failOnError = true
+    instructions << [
+            'Export-Package'       : 'com.athaydes.osgi.rsa.provider.protobuf.api',
+            'Import-Package'       : 'org.osgi.service.remoteserviceadmin;version=1.0.0,*',
+            'Bundle-Vendor'        : 'Renato Athaydes',
+            'Bundle-Name'          : 'Protobuffer TCP RSA Provider',
+            'Bundle-Description'   : description,
+            'Bundle-DocURL'        : 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider',
+            'Bundle-Activator'     : 'com.athaydes.osgi.rsa.provider.protobuf.Activator',
+            'Provide-Capability'   : 'osgi.remoteserviceadmin.distribution;' +
+                    'configs:List<String>="com.athaydes.protobuf"; version:Version=1.0'
+    ]
 }
