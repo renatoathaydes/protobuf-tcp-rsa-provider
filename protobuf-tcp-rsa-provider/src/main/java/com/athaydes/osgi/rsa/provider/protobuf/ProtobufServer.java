@@ -15,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +40,7 @@ public class ProtobufServer implements Runnable, Closeable {
 
     private final ExecutorService handlerService = Executors.newFixedThreadPool(5);
 
-    ProtobufServer(int port, Object service) {
+    public ProtobufServer(int port, Object service) {
         this.port = port;
         this.service = service;
     }
@@ -67,6 +68,8 @@ public class ProtobufServer implements Runnable, Closeable {
                 clientSocket = serverSocket.accept();
                 log.debug("Accepting connection from: {}", clientSocket.getInetAddress());
                 handlerService.submit(new Handler(service, clientSocket));
+            } catch (SocketException e) {
+                log.info("Client disconnected: {}", e.getMessage());
             } catch (IOException e) {
                 log.warn("Error while handing over client to worker", e);
                 running = false;
@@ -243,9 +246,9 @@ public class ProtobufServer implements Runnable, Closeable {
         System.out.println("Starting ProtobufServer with HelloService.\n" +
                 "The only method call allowed has the following signature:\n" +
                 "  public StringValue sayHello(StringValue message)\n" +
-                "Send a message to port 5556 and this server will respond!\n");
+                "Send a message to port 5562 and this server will respond!\n");
 
-        ProtobufServer server = new ProtobufServer(5556, new HelloService());
+        ProtobufServer server = new ProtobufServer(5562, new HelloService());
 
         server.run();
     }
