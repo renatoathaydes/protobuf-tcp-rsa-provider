@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id "com.google.protobuf" version "0.8.3"
+}
+
+sourceCompatibility = 1.8
+
+dependencies {
+    compile 'org.apache.aries.rsa:org.apache.aries.rsa.spi:1.11.0'
+    compile 'com.google.protobuf:protobuf-java:3.4.0'
+    compile 'org.slf4j:slf4j-api:1.7.25'
+    compileOnly 'org.osgi:org.osgi.core:4.3.1'
+    compileOnly 'org.osgi:org.osgi.service.remoteserviceadmin:1.1.0'
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.slf4j:slf4j-simple:1.7.25'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir "$buildDir/generated/source/proto/main/java"
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.0.0'
+    }
+}

@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package com.athaydes.osgi.rsa.api;
+
+import "google/protobuf/any.proto";
+
+option java_package = "com.athaydes.osgi.rsa.api";
+option java_outer_classname = "Api";
+
+message MethodInvocation {
+    string methodName = 1;
+    repeated google.protobuf.Any args = 2;
+}
+
+message Exception {
+    string type = 1;
+    string message = 5;
+}
+
+message Result {
+    oneof result {
+        google.protobuf.Any successResult = 1;
+        Exception exception = 2;
+    }
+}

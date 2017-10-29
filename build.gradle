@@ -1,0 +1,11 @@
+plugins {
+    id 'idea'
+}
+
+allprojects {
+    group 'com.athaydes.osgi'
+    version '1.0-SNAPSHOT'
+    repositories {
+        jcenter()
+    }
+}
