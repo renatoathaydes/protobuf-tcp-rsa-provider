@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+repositories {
+    jcenter()
+    mavenLocal()
+}
+
+mainClassName = 'com.athaydes.osgi.rsa.provider.protobuf.ProtobufServer'
+
+dependencies {
+    runtime 'com.athaydes.osgi:protobuf-tcp-rsa-provider:1.0-SNAPSHOT'
+}
