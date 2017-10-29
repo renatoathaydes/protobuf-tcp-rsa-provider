@@ -37,7 +37,7 @@ public class ProtobufProvider implements DistributionProvider {
                                   Map<String, Object> effectiveProperties,
                                   Class[] exportedInterfaces) {
         effectiveProperties.put(RemoteConstants.SERVICE_IMPORTED_CONFIGS, getSupportedTypes());
-        ProtobufEndpoint endpoint = new ProtobufEndpoint(serviceO, effectiveProperties);
+        ProtobufEndpoint endpoint = new ProtobufEndpoint(serviceO, effectiveProperties, exportedInterfaces);
         log.info("Exporting service of type {} with properties {}", serviceO.getClass().getSimpleName(),
                 effectiveProperties);
         closeables.add(endpoint);

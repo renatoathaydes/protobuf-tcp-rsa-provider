@@ -16,16 +16,18 @@ import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.athaydes.osgi.rsa.provider.protobuf.MethodResolver.resolveMethods;
 import static com.athaydes.osgi.rsa.provider.protobuf.Utils.closeQuietly;
+import static java.util.Collections.emptyList;
 
 /**
  * A TCP implementation of a Protobuf RPC server that sends method invocations to a local service.
@@ -37,12 +39,18 @@ public class ProtobufServer implements Runnable, Closeable {
     private final int port;
     private final Object service;
     private final AtomicReference<ServerSocket> serverSocketRef = new AtomicReference<>();
+    private final Map<String, List<Method>> methodsByName;
 
     private final ExecutorService handlerService = Executors.newFixedThreadPool(5);
 
     public ProtobufServer(int port, Object service) {
+        this(port, service, new Class[]{});
+    }
+
+    public ProtobufServer(int port, Object service, Class[] exportedInterfaces) {
         this.port = port;
         this.service = service;
+        this.methodsByName = resolveMethods(service, exportedInterfaces);
     }
 
     @Override
@@ -67,7 +75,7 @@ public class ProtobufServer implements Runnable, Closeable {
             try {
                 clientSocket = serverSocket.accept();
                 log.debug("Accepting connection from: {}", clientSocket.getInetAddress());
-                handlerService.submit(new Handler(service, clientSocket));
+                handlerService.submit(new Handler(service, methodsByName, clientSocket));
             } catch (SocketException e) {
                 log.info("Client disconnected: {}", e.getMessage());
             } catch (IOException e) {
@@ -100,11 +108,14 @@ public class ProtobufServer implements Runnable, Closeable {
     private static class Handler implements Runnable {
 
         private final Object service;
+        private final Map<String, List<Method>> methodsByName;
         private final Socket clientSocket;
 
         Handler(Object service,
+                Map<String, List<Method>> methodsByName,
                 Socket clientSocket) {
             this.service = service;
+            this.methodsByName = methodsByName;
             this.clientSocket = clientSocket;
         }
 
@@ -128,8 +139,7 @@ public class ProtobufServer implements Runnable, Closeable {
 
             log.debug("Looking up method '{}' of service {}", methodName, service);
 
-            Optional<Method> method = Arrays.stream(service.getClass().getMethods())
-                    .filter(m -> m.getName().equals(methodName))
+            Optional<Method> method = methodsByName.getOrDefault(methodName, emptyList()).stream()
                     .filter(m -> matchesArgTypes(m, args.iterator()))
                     .findAny();
 

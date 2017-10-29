@@ -21,9 +21,13 @@ public class ProtobufEndpoint implements Endpoint {
     private final Thread serverThread;
 
     ProtobufEndpoint(Object service,
-                     Map<String, Object> effectiveProperties) {
+                     Map<String, Object> effectiveProperties,
+                     Class[] exportedInterfaces) {
         if (service == null) {
             throw new NullPointerException("Service must not be null");
+        }
+        if (exportedInterfaces.length == 0) {
+            throw new IllegalArgumentException("Cannot export service without any interfaces");
         }
 
         int port = getIntFrom(effectiveProperties, DOMAIN + ".port")
@@ -32,7 +36,7 @@ public class ProtobufEndpoint implements Endpoint {
         String hostName = getStringFrom(effectiveProperties, DOMAIN + ".hostname")
                 .orElse("localhost");
 
-        this.server = new ProtobufServer(port, service);
+        this.server = new ProtobufServer(port, service, exportedInterfaces);
 
         String endpointId = String.format("tcp://%s:%s", hostName, port);
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
