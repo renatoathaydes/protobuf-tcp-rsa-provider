@@ -2,7 +2,7 @@
  *
  */
 
-@Grab(group = 'com.athaydes.osgi', module = 'protobuf-tcp-rsa-provider', version = '1.0-SNAPSHOT')
+@Grab(group = 'com.athaydes.osgi', module = 'protobuf-tcp-rsa-provider', version = '0.1.0')
 import com.athaydes.osgi.rsa.provider.protobuf.api.Api
 import com.google.protobuf.Any
 import com.google.protobuf.StringValue
@@ -60,7 +60,9 @@ while (true) {
         new Socket('127.0.0.1', port).withStreams { input, out ->
             try {
                 invocation.writeDelimitedTo(out)
+                def startTime = System.nanoTime()
                 def result = Api.Result.parseDelimitedFrom(input)
+                println "Got response in ${System.nanoTime() - startTime} ns"
                 println result
                 println()
             } catch (e) {

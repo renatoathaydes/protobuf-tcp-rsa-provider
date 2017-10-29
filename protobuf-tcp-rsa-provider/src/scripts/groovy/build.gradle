@@ -11,5 +11,5 @@ repositories {
 mainClassName = 'com.athaydes.osgi.rsa.provider.protobuf.ProtobufServer'
 
 dependencies {
-    runtime 'com.athaydes.osgi:protobuf-tcp-rsa-provider:1.0-SNAPSHOT'
+    runtime 'com.athaydes.osgi:protobuf-tcp-rsa-provider:0.1.0'
 }
