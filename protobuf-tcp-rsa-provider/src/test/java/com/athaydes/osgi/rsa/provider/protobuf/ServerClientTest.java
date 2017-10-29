@@ -8,6 +8,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.Socket;
 import java.net.URI;
 import java.util.Deque;
@@ -49,15 +50,40 @@ public class ServerClientTest {
         ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + PORT));
 
         // make a RPC call
-        Object result = handler.invoke(service, ExampleService.callMethod,
+        Object result = handler.invoke(service, service.callMethod,
                 new Object[]{StringValue.newBuilder().setValue("hello").build()});
 
         // ensure the result is correct
         assertThat(result, equalTo(exampleMethodInvocation));
 
         // ensure the method was really called
-        String arg = ExampleService.calls.removeFirst();
+        String arg = service.calls.removeFirst();
         assertThat(arg, equalTo("hello"));
+    }
+
+    @Test
+    public void testProxyClient() throws Throwable {
+        // start the server
+        serverThread.submit(server);
+
+        // server should be running now
+        waitForSocketToBind(PORT);
+
+        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + PORT));
+
+        // wrap handler into a Proxy
+        Service proxyService = (Service) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+                new Class[]{Service.class}, handler);
+
+        // make a indirect RPC call using the proxy
+        Object result = proxyService.call(StringValue.newBuilder().setValue("bye").build());
+
+        // ensure the result is correct
+        assertThat(result, equalTo(exampleMethodInvocation));
+
+        // ensure the method was really called
+        String arg = service.calls.removeFirst();
+        assertThat(arg, equalTo("bye"));
     }
 
     private static void waitForSocketToBind(int port) throws Exception {
@@ -78,11 +104,15 @@ public class ServerClientTest {
         }
     }
 
-    public static class ExampleService {
+    public interface Service {
+        Api.MethodInvocation call(StringValue text);
+    }
 
-        static final Method callMethod;
+    public static class ExampleService implements Service {
 
-        static {
+        final Method callMethod;
+
+        ExampleService() {
             try {
                 callMethod = ExampleService.class.getMethod("call", StringValue.class);
             } catch (NoSuchMethodException e) {
@@ -90,8 +120,9 @@ public class ServerClientTest {
             }
         }
 
-        static final Deque<String> calls = new ConcurrentLinkedDeque<>();
+        final Deque<String> calls = new ConcurrentLinkedDeque<>();
 
+        @Override
         public Api.MethodInvocation call(StringValue text) {
             calls.add(text.getValue());
             return exampleMethodInvocation;
