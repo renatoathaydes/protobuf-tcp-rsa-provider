@@ -18,6 +18,7 @@ public class ProtobufEndpoint implements Endpoint {
 
     private final EndpointDescription description;
     private final ProtobufServer server;
+    private final Thread serverThread;
 
     ProtobufEndpoint(Object service,
                      Map<String, Object> effectiveProperties) {
@@ -37,6 +38,7 @@ public class ProtobufEndpoint implements Endpoint {
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
         effectiveProperties.put(RemoteConstants.SERVICE_EXPORTED_CONFIGS, "");
         this.description = new EndpointDescription(effectiveProperties);
+        this.serverThread = new Thread(server, description.getId());
     }
 
     @Override
@@ -44,8 +46,13 @@ public class ProtobufEndpoint implements Endpoint {
         return description;
     }
 
+    void start() {
+        serverThread.start();
+    }
+
     @Override
     public void close() throws IOException {
         server.close();
+        serverThread.interrupt();
     }
 }

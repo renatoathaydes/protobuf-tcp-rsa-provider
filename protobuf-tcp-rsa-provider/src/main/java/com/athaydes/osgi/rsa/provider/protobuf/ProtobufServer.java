@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.athaydes.osgi.rsa.provider.protobuf.Utils.closeQuietly;
@@ -34,7 +35,7 @@ public class ProtobufServer implements Runnable, Closeable {
 
     private final int port;
     private final Object service;
-    private final AtomicReference<Thread> serverThreadRef = new AtomicReference<>();
+    private final AtomicReference<ServerSocket> serverSocketRef = new AtomicReference<>();
 
     private final ExecutorService handlerService = Executors.newFixedThreadPool(5);
 
@@ -46,13 +47,12 @@ public class ProtobufServer implements Runnable, Closeable {
     @Override
     public void run() {
         log.info("Starting ProtobufServer on port " + port);
-        if (!serverThreadRef.compareAndSet(null, Thread.currentThread())) {
-            throw new RuntimeException("Server already running");
-        }
 
         ServerSocket serverSocket;
         try {
-            serverSocket = new ServerSocket(port);
+            if (!serverSocketRef.compareAndSet(null, serverSocket = new ServerSocket(port))) {
+                throw new RuntimeException("Server already running");
+            }
         } catch (IOException e) {
             log.warn("Error starting server", e);
             throw new RuntimeException(e);
@@ -62,12 +62,23 @@ public class ProtobufServer implements Runnable, Closeable {
 
         while (running) {
             log.debug("Waiting for new client");
+            Socket clientSocket = null;
             try {
-                Socket clientSocket = serverSocket.accept();
+                clientSocket = serverSocket.accept();
                 log.debug("Accepting connection from: {}", clientSocket.getInetAddress());
                 handlerService.submit(new Handler(service, clientSocket));
             } catch (IOException e) {
                 log.warn("Error while handing over client to worker", e);
+                running = false;
+            } catch (RejectedExecutionException e) {
+                log.warn("This service has been stopped and cannot respond anymore!");
+                if (clientSocket != null) {
+                    closeQuietly(clientSocket);
+                }
+                running = false;
+            }
+            if (Thread.currentThread().isInterrupted()) {
+                log.info("Server Thread has been interrupted, server no longer listening");
                 running = false;
             }
         }
@@ -76,11 +87,10 @@ public class ProtobufServer implements Runnable, Closeable {
     @Override
     public void close() {
         log.info("Stopping server");
-        Thread serverThread = serverThreadRef.get();
-        if (serverThread != null) {
-            serverThread.interrupt();
+        ServerSocket serverSocket = serverSocketRef.get();
+        if (serverSocket != null) {
+            closeQuietly(serverSocket);
         }
-
         handlerService.shutdown();
     }
 
@@ -219,6 +229,25 @@ public class ProtobufServer implements Runnable, Closeable {
             return true;
         }
 
+    }
+
+    public static void main(String[] args) {
+        class HelloService {
+            public StringValue sayHello(StringValue message) {
+                return StringValue.newBuilder()
+                        .setValue("Hello " + message.getValue())
+                        .build();
+            }
+        }
+
+        System.out.println("Starting ProtobufServer with HelloService.\n" +
+                "The only method call allowed has the following signature:\n" +
+                "  public StringValue sayHello(StringValue message)\n" +
+                "Send a message to port 5556 and this server will respond!\n");
+
+        ProtobufServer server = new ProtobufServer(5556, new HelloService());
+
+        server.run();
     }
 
 }

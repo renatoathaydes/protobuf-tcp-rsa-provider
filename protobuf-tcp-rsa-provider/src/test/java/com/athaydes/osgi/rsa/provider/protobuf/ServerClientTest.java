@@ -18,9 +18,6 @@ import java.util.concurrent.Executors;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
-/**
- *
- */
 public class ServerClientTest {
 
     private static final int PORT = 5556;
@@ -38,7 +35,7 @@ public class ServerClientTest {
     @After
     public void cleanup() {
         server.close();
-        serverThread.shutdown();
+        serverThread.shutdownNow();
     }
 
     @Test
