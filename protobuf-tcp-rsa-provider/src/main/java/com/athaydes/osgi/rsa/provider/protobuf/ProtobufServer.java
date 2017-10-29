@@ -1,6 +1,6 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
-import com.athaydes.osgi.rsa.api.Api;
+import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.athaydes.osgi.rsa.provider.protobuf.Utils.closeQuietly;
 
 /**
- *
+ * A TCP implementation of a Protobuf RPC server that sends method invocations to a local service.
  */
 public class ProtobufServer implements Runnable, Closeable {
 

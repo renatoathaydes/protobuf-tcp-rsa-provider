@@ -1,7 +1,7 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
-import com.athaydes.osgi.rsa.api.Api;
-import com.athaydes.osgi.rsa.api.Api.MethodInvocation;
+import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
+import com.athaydes.osgi.rsa.provider.protobuf.api.Api.MethodInvocation;
 import com.google.protobuf.Any;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;

@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package com.athaydes.osgi.rsa.api;
+package com.athaydes.osgi.rsa.provider.protobuf.api;
 
 import "google/protobuf/any.proto";
 
-option java_package = "com.athaydes.osgi.rsa.api";
+option java_package = "com.athaydes.osgi.rsa.provider.protobuf.api";
 option java_outer_classname = "Api";
 
 message MethodInvocation {

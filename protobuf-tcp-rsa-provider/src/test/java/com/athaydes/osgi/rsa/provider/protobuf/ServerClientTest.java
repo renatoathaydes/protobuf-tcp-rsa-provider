@@ -1,6 +1,6 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
-import com.athaydes.osgi.rsa.api.Api;
+import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
 import com.google.protobuf.Any;
 import com.google.protobuf.StringValue;
 import org.junit.After;
