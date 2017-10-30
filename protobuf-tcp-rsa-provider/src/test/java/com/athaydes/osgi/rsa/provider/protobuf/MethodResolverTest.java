@@ -29,6 +29,7 @@ public class MethodResolverTest {
         assertThat(helloMethods.size(), equalTo(1));
         assertThat(helloMethods.get(0).getName(), equalTo("hello"));
         assertThat(helloMethods.get(0).getParameterTypes().length, equalTo(0));
+        assertThat(helloMethods.get(0).getReturnType(), equalTo(void.class));
     }
 
     @Test
@@ -93,6 +94,46 @@ public class MethodResolverTest {
         assertThat(wowMethods.get(0).getParameterTypes().length, equalTo(0));
     }
 
+
+    @Test
+    public void resolvesSuperInterfaceMethodsServices4And5ButNotOtherInterfaces() throws Exception {
+        Map<String, List<Method>> methods = MethodResolver
+                .resolveMethods(new SuperService(),
+                        new Class[]{Service4.class, Service5.class});
+
+        assertThat(methods.size(), equalTo(4));
+        assertThat(methods.keySet(), equalTo(new HashSet<>(Arrays.asList(
+                "cool", "uncool", "hello", "veryCool"))));
+
+        List<Method> helloMethods = methods.get("hello");
+
+        assertThat(helloMethods.size(), equalTo(1));
+        assertThat(helloMethods.get(0).getName(), equalTo("hello"));
+        assertThat(helloMethods.get(0).getParameterTypes().length, equalTo(0));
+        assertThat(helloMethods.get(0).getReturnType(), equalTo(void.class));
+
+        List<Method> coolMethods = methods.get("cool");
+
+        assertThat(coolMethods.size(), equalTo(1));
+        assertThat(coolMethods.get(0).getName(), equalTo("cool"));
+        assertThat(coolMethods.get(0).getParameterTypes().length, equalTo(0));
+        assertThat(coolMethods.get(0).getReturnType(), equalTo(int.class));
+
+        List<Method> uncoolMethods = methods.get("uncool");
+
+        assertThat(uncoolMethods.size(), equalTo(1));
+        assertThat(uncoolMethods.get(0).getName(), equalTo("uncool"));
+        assertThat(uncoolMethods.get(0).getParameterTypes().length, equalTo(0));
+        assertThat(uncoolMethods.get(0).getReturnType(), equalTo(boolean.class));
+
+        List<Method> veryCoolMethods = methods.get("veryCool");
+
+        assertThat(veryCoolMethods.size(), equalTo(1));
+        assertThat(veryCoolMethods.get(0).getName(), equalTo("veryCool"));
+        assertThat(veryCoolMethods.get(0).getParameterTypes().length, equalTo(0));
+        assertThat(veryCoolMethods.get(0).getReturnType(), equalTo(float.class));
+    }
+
     interface Service1 {
         void hello();
     }
@@ -103,6 +144,18 @@ public class MethodResolverTest {
         String bye(int count, boolean ok);
 
         boolean isCool(String song, String author);
+    }
+
+    interface Service3 extends Service1 {
+        int cool();
+    }
+
+    interface Service4 extends Service3 {
+        boolean uncool();
+    }
+
+    interface Service5 {
+        float veryCool();
     }
 
     public static class Base {
@@ -124,6 +177,46 @@ public class MethodResolverTest {
 
         protected boolean isHidden() {
             return true;
+        }
+    }
+
+    public static class SuperService implements
+            Service1, Service2, Service3, Service4, Service5 {
+        @Override
+        public void hello() {
+        }
+
+        @Override
+        public String bye(String name) {
+            return "bye " + name;
+        }
+
+        @Override
+        public String bye(int count, boolean ok) {
+            return "";
+        }
+
+        @Override
+        public boolean isCool(String song, String author) {
+            return false;
+        }
+
+        @Override
+        public int cool() {
+            return 0;
+        }
+
+        @Override
+        public boolean uncool() {
+            return false;
+        }
+
+        @Override
+        public float veryCool() {
+            return 0f;
+        }
+
+        public void extraMethod() {
         }
     }
 }
