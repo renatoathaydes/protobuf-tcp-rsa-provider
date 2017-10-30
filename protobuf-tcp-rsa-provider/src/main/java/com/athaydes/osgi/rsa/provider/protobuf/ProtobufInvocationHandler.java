@@ -22,7 +22,8 @@ import java.lang.reflect.Method;
 import java.net.Socket;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * TCP Protobuf-based {@link InvocationHandler}.
@@ -41,10 +42,13 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
     public Object invoke(Object proxy, Method method, Object[] args) throws RuntimeException {
         MethodInvocation invocation = MethodInvocation.newBuilder()
                 .setMethodName(method.getName())
-                .addAllArgs(Arrays.stream(args)
+                .addAllArgs(Arrays.stream(args == null ? new Object[]{} : args)
                         .map(ProtobufInvocationHandler::toMessage)
-                        .collect(Collectors.toList()))
-                .build();
+                        .peek(msg -> {
+                            if (msg == null) {
+                                throw new NullPointerException("Remote method invocation cannot accept null argument");
+                            }
+                        }).collect(toList())).build();
 
         Api.Result result;
 
@@ -66,6 +70,9 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             return null;
         } else switch (result.getResultCase()) {
             case SUCCESSRESULT:
+                if (method.getReturnType().equals(void.class)) {
+                    return null;
+                }
                 Object value = MethodInvocationResolver.tryConvert(result.getSuccessResult(), method.getReturnType());
                 if (value == null) {
                     throw new RuntimeException(String.format("Cannot convert %s to %s",
@@ -81,7 +88,17 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
         }
     }
 
+    /**
+     * Converts an object to a Protobuf message wrapped into {@link Any}.
+     *
+     * @param object to convert
+     * @return converted object if possible. If object is null, null is returned.
+     * @throws ClassCastException if a conversion is not possible.
+     */
     static Any toMessage(Object object) {
+        if (object == null) {
+            return null;
+        }
         if (object instanceof Message) {
             return Any.pack((Message) object);
         }
@@ -107,7 +124,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             return Any.pack(BytesValue.newBuilder().setValue(ByteString.copyFrom(new byte[]{(byte) object})).build());
         }
 
-        throw new ClassCastException("Cannot cast " + object.getClass() + " to " + Message.class);
+        throw new ClassCastException("Cannot cast " + object.getClass() + " to " + Any.class);
     }
 
     @Override

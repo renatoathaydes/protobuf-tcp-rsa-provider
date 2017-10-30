@@ -15,6 +15,7 @@ import java.util.Deque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
@@ -23,6 +24,7 @@ public class ServerClientTest {
 
     private static final int EXAMPLE_SERVICE_PORT = 5556;
     private static final int JAVA_SERVICE_PORT = 5557;
+    private static final int RUNNER_SERVICE_PORT = 5558;
 
     private final ExecutorService serverThread = Executors.newSingleThreadExecutor();
 
@@ -36,13 +38,17 @@ public class ServerClientTest {
     private final JavaService javaService = (prefix, a, b, showPrefix) ->
             (showPrefix ? prefix : "") + (a + b);
 
+    private final Runner runnerService = new Runner();
+
     private final ProtobufServer exampleServer = new ProtobufServer(EXAMPLE_SERVICE_PORT, exampleService);
     private final ProtobufServer javaServer = new ProtobufServer(JAVA_SERVICE_PORT, javaService);
+    private final ProtobufServer runnerServer = new ProtobufServer(RUNNER_SERVICE_PORT, runnerService);
 
     @After
     public void cleanup() {
         exampleServer.close();
         javaServer.close();
+        runnerServer.close();
         serverThread.shutdownNow();
     }
 
@@ -126,6 +132,29 @@ public class ServerClientTest {
         assertThat(result, equalTo("Result:-1.5"));
     }
 
+    @Test
+    public void testRunnerServiceReturningVoid() throws Throwable {
+        // start the server
+        serverThread.submit(runnerServer);
+
+        // server should be running now
+        waitForSocketToBind(RUNNER_SERVICE_PORT);
+
+        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + RUNNER_SERVICE_PORT));
+
+        // wrap handler into a Proxy
+        Runnable proxyService = (Runnable) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+                new Class[]{Runnable.class}, handler);
+
+        // make a few indirect RPC calls using the proxy
+        proxyService.run();
+        proxyService.run();
+        proxyService.run();
+
+        // ensure the method was really called
+        assertThat(runnerService.methodCount.get(), equalTo(3));
+    }
+
     private static void waitForSocketToBind(int port) throws Exception {
         long giveupTime = System.currentTimeMillis() + 5000;
         while (true) {
@@ -172,6 +201,16 @@ public class ServerClientTest {
             return exampleMethodInvocation;
         }
 
+    }
+
+    public static class Runner implements Runnable {
+
+        private final AtomicInteger methodCount = new AtomicInteger();
+
+        @Override
+        public void run() {
+            methodCount.incrementAndGet();
+        }
     }
 
 }

@@ -177,7 +177,15 @@ final class MethodInvocationResolver {
         Any callWith(Object object)
                 throws InvocationTargetException, IllegalAccessException {
             Object result = method.invoke(object, parameters);
-            return ProtobufInvocationHandler.toMessage(result);
+            Any message = ProtobufInvocationHandler.toMessage(result);
+            if (message == null) {
+                if (method.getReturnType().equals(void.class)) {
+                    return Any.pack(StringValue.getDefaultInstance());
+                } else {
+                    throw new NullPointerException("Remote service cannot return null value");
+                }
+            }
+            return message;
         }
 
         @Override
