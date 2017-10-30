@@ -76,14 +76,21 @@ public class MethodResolverTest {
         Map<String, List<Method>> methods = MethodResolver
                 .resolveMethods(new ServiceImpl(), new Class[]{});
 
-        assertThat(methods.size(), equalTo(1));
-        assertThat(methods.keySet(), equalTo(singleton("hello")));
+        assertThat(methods.size(), equalTo(2));
+        assertThat(methods.keySet(), equalTo(new HashSet<>(Arrays.asList("hello", "wow"))));
 
         List<Method> helloMethods = methods.get("hello");
 
         assertThat(helloMethods.size(), equalTo(1));
         assertThat(helloMethods.get(0).getName(), equalTo("hello"));
         assertThat(helloMethods.get(0).getParameterTypes().length, equalTo(0));
+
+        // superclass public methods are visible, but not Object's methods
+        List<Method> wowMethods = methods.get("wow");
+
+        assertThat(wowMethods.size(), equalTo(1));
+        assertThat(wowMethods.get(0).getName(), equalTo("wow"));
+        assertThat(wowMethods.get(0).getParameterTypes().length, equalTo(0));
     }
 
     interface Service1 {
