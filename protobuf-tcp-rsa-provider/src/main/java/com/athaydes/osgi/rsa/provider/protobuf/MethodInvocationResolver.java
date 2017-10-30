@@ -1,0 +1,192 @@
+package com.athaydes.osgi.rsa.provider.protobuf;
+
+import com.google.protobuf.Any;
+import com.google.protobuf.BoolValue;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.BytesValue;
+import com.google.protobuf.DoubleValue;
+import com.google.protobuf.FloatValue;
+import com.google.protobuf.Int32Value;
+import com.google.protobuf.Int64Value;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.StringValue;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * Resolver of method parameters given a method invocation arguments.
+ */
+@SuppressWarnings("UnnecessaryLocalVariable") // verify expressions have the right type
+final class MethodInvocationResolver {
+
+    /**
+     * Type converter function.
+     */
+    private interface TypeConverter {
+        Object apply(Any any) throws InvalidProtocolBufferException;
+    }
+
+    /**
+     * Avoids having to check for both primitive and boxed types.
+     */
+    private static final Map<Class<?>, Class<?>> boxedTypes;
+
+    /**
+     * Functions converting Java types to protobuf value unpacking functions.
+     */
+    private static final Map<Class<?>, TypeConverter> typeConverters;
+
+    static {
+        Map<Class<?>, Class<?>> boxedTypes_ = new HashMap<>(8, 1.0f);
+        boxedTypes_.put(boolean.class, Boolean.class);
+        boxedTypes_.put(byte.class, Byte.class);
+        boxedTypes_.put(short.class, Short.class);
+        boxedTypes_.put(char.class, Character.class);
+        boxedTypes_.put(int.class, Integer.class);
+        boxedTypes_.put(long.class, Long.class);
+        boxedTypes_.put(float.class, Float.class);
+        boxedTypes_.put(double.class, Double.class);
+
+        boxedTypes = Collections.unmodifiableMap(boxedTypes_);
+
+        Map<Class<?>, TypeConverter> typeConverters_ = new HashMap<>(9, 1.0f);
+
+        typeConverters_.put(String.class, any -> {
+            String result = any.is(StringValue.class) ? any.unpack(StringValue.class).getValue() : null;
+            return result;
+        });
+
+        typeConverters_.put(Boolean.class, any -> {
+            Boolean result = any.is(BoolValue.class) ? any.unpack(BoolValue.class).getValue() : null;
+            return result;
+        });
+
+        typeConverters_.put(Byte.class, any -> {
+            ByteString bytes = any.is(BytesValue.class) ? any.unpack(BytesValue.class).getValue() : null;
+            if (bytes == null || bytes.size() != 1) {
+                return null;
+            }
+            return bytes.byteAt(0);
+        });
+
+        typeConverters_.put(Short.class, any -> {
+            Short result = any.is(Int32Value.class) ? (short) any.unpack(Int32Value.class).getValue() : null;
+            return result;
+        });
+
+        typeConverters_.put(Character.class, any -> {
+            String value = any.is(StringValue.class) ? any.unpack(StringValue.class).getValue() : null;
+            if (value == null || value.length() != 1) {
+                return null;
+            }
+            return value.charAt(0);
+        });
+
+        typeConverters_.put(Integer.class, any -> {
+            Integer result = any.is(Int32Value.class) ? any.unpack(Int32Value.class).getValue() : null;
+            return result;
+        });
+
+        typeConverters_.put(Long.class, any -> {
+            Long result = any.is(Int64Value.class) ? any.unpack(Int64Value.class).getValue() : null;
+            return result;
+        });
+
+        typeConverters_.put(Float.class, any -> {
+            Float result = any.is(FloatValue.class) ? any.unpack(FloatValue.class).getValue() : null;
+            return result;
+        });
+
+        typeConverters_.put(Double.class, any -> {
+            Double result = any.is(DoubleValue.class) ? any.unpack(DoubleValue.class).getValue() : null;
+            return result;
+        });
+
+        typeConverters = Collections.unmodifiableMap(typeConverters_);
+    }
+
+    /**
+     * Resolves the method invocation parameters given the provided arguments.
+     *
+     * @param method to being invoked
+     * @param args   arguments for the method
+     * @return a resolved method invocation if the arguments match the method parameters
+     */
+    static Optional<ResolvedInvocationInfo> resolveMethodInvocation(Method method, List<Any> args) {
+        Class<?>[] parameterTypes = method.getParameterTypes();
+
+        if (args.size() != parameterTypes.length) {
+            return Optional.empty();
+        }
+
+        Object[] resolvedArgs = new Object[parameterTypes.length];
+
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Object arg = tryConvert(args.get(i), parameterTypes[i]);
+            if (arg == null) {
+                return Optional.empty();
+            }
+            resolvedArgs[i] = arg;
+        }
+
+        return Optional.of(new ResolvedInvocationInfo(method, resolvedArgs));
+    }
+
+    static Object tryConvert(Any any, Class<?> type) {
+        if (Message.class.isAssignableFrom(type)) {
+            Class<? extends Message> messageType = type.asSubclass(Message.class);
+            if (any.is(messageType)) try {
+                return any.unpack(messageType);
+            } catch (InvalidProtocolBufferException e) {
+                throw new RuntimeException("Unable to unpack message argument", e);
+            }
+        }
+
+        // not a protobuf type, try a Java type
+        try {
+            return tryConvertJavaType(any, type);
+        } catch (InvalidProtocolBufferException e) {
+            return null;
+        }
+    }
+
+    private static Object tryConvertJavaType(Any any, Class<?> type)
+            throws InvalidProtocolBufferException {
+        Class<?> boxedType = boxedTypes.getOrDefault(type, type);
+        TypeConverter converter = typeConverters.get(boxedType);
+        return converter == null ? null : converter.apply(any);
+    }
+
+    static final class ResolvedInvocationInfo {
+        private final Method method;
+        private final Object[] parameters;
+
+        private ResolvedInvocationInfo(Method method, Object[] parameters) {
+            this.method = method;
+            this.parameters = parameters;
+        }
+
+        Any callWith(Object object)
+                throws InvocationTargetException, IllegalAccessException {
+            Object result = method.invoke(object, parameters);
+            return ProtobufInvocationHandler.toMessage(result);
+        }
+
+        @Override
+        public String toString() {
+            return "ResolvedInvocationInfo{" +
+                    "method=" + method +
+                    ", parameters=" + Arrays.toString(parameters) +
+                    '}';
+        }
+    }
+
+}

@@ -21,7 +21,8 @@ import static org.junit.Assert.assertThat;
 
 public class ServerClientTest {
 
-    private static final int PORT = 5556;
+    private static final int EXAMPLE_SERVICE_PORT = 5556;
+    private static final int JAVA_SERVICE_PORT = 5557;
 
     private final ExecutorService serverThread = Executors.newSingleThreadExecutor();
 
@@ -30,46 +31,52 @@ public class ServerClientTest {
             .addArgs(Any.pack(StringValue.newBuilder().setValue("some-arg").build()))
             .build();
 
-    private final ExampleService service = new ExampleService();
-    private final ProtobufServer server = new ProtobufServer(PORT, service);
+    private final ExampleService exampleService = new ExampleService();
+
+    private final JavaService javaService = (prefix, a, b, showPrefix) ->
+            (showPrefix ? prefix : "") + (a + b);
+
+    private final ProtobufServer exampleServer = new ProtobufServer(EXAMPLE_SERVICE_PORT, exampleService);
+    private final ProtobufServer javaServer = new ProtobufServer(JAVA_SERVICE_PORT, javaService);
 
     @After
     public void cleanup() {
-        server.close();
+        exampleServer.close();
+        javaServer.close();
         serverThread.shutdownNow();
     }
 
     @Test
     public void testServerClient() throws Throwable {
         // start the server
-        serverThread.submit(server);
+        serverThread.submit(exampleServer);
 
         // server should be running now
-        waitForSocketToBind(PORT);
+        waitForSocketToBind(EXAMPLE_SERVICE_PORT);
 
-        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + PORT));
+        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + EXAMPLE_SERVICE_PORT));
 
         // make a RPC call
-        Object result = handler.invoke(service, service.callMethod,
+        Object result = handler.invoke(exampleService, exampleService.callMethod,
                 new Object[]{StringValue.newBuilder().setValue("hello").build()});
 
         // ensure the result is correct
         assertThat(result, equalTo(exampleMethodInvocation));
 
         // ensure the method was really called
-        String arg = service.calls.removeFirst();
+        String arg = exampleService.calls.removeFirst();
         assertThat(arg, equalTo("hello"));
     }
 
     @Test
     public void testProxyClient() throws Throwable {
         // start the server
-        serverThread.submit(server);
+        serverThread.submit(exampleServer);
 
         // server should be running now
-        waitForSocketToBind(PORT);
+        waitForSocketToBind(EXAMPLE_SERVICE_PORT);
 
-        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + PORT));
+        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + EXAMPLE_SERVICE_PORT));
 
         // wrap handler into a Proxy
         Service proxyService = (Service) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
@@ -82,15 +89,48 @@ public class ServerClientTest {
         assertThat(result, equalTo(exampleMethodInvocation));
 
         // ensure the method was really called
-        String arg = service.calls.removeFirst();
+        String arg = exampleService.calls.removeFirst();
         assertThat(arg, equalTo("bye"));
+    }
+
+    @Test
+    public void testProxyClientWithJavaServiceRepeatedCalls() throws Throwable {
+        // start the server
+        serverThread.submit(javaServer);
+
+        // server should be running now
+        waitForSocketToBind(JAVA_SERVICE_PORT);
+
+        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + JAVA_SERVICE_PORT));
+
+        // wrap handler into a Proxy
+        JavaService proxyService = (JavaService) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+                new Class[]{JavaService.class}, handler);
+
+        // make a indirect RPC call using the proxy
+        String result = proxyService.sum("Sum = ", 2, 3.25f, true);
+
+        // ensure the result is correct
+        assertThat(result, equalTo("Sum = 5.25"));
+
+        // second call
+        result = proxyService.sum("", 1, 0.5f, false);
+
+        // ensure the result is correct
+        assertThat(result, equalTo("1.5"));
+
+        // second call
+        result = proxyService.sum("Result:", -1, -0.5f, true);
+
+        // ensure the result is correct
+        assertThat(result, equalTo("Result:-1.5"));
     }
 
     private static void waitForSocketToBind(int port) throws Exception {
         long giveupTime = System.currentTimeMillis() + 5000;
         while (true) {
             try {
-                Socket socket = new Socket("127.0.0.1", PORT);
+                Socket socket = new Socket("127.0.0.1", port);
                 socket.getOutputStream();
                 System.out.println("Successfully connected to server");
                 socket.close();
@@ -106,6 +146,10 @@ public class ServerClientTest {
 
     public interface Service {
         Api.MethodInvocation call(StringValue text);
+    }
+
+    public interface JavaService {
+        String sum(String prefix, int a, float b, boolean showPrefix);
     }
 
     public static class ExampleService implements Service {

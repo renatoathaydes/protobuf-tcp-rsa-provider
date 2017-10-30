@@ -2,8 +2,6 @@ package com.athaydes.osgi.rsa.provider.protobuf;
 
 import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
 import com.google.protobuf.Any;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
 import com.google.protobuf.StringValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +14,6 @@ import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -139,19 +136,22 @@ public class ProtobufServer implements Runnable, Closeable {
 
             log.debug("Looking up method '{}' of service {}", methodName, service);
 
-            Optional<Method> method = methodsByName.getOrDefault(methodName, emptyList()).stream()
-                    .filter(m -> matchesArgTypes(m, args.iterator()))
+            Optional<MethodInvocationResolver.ResolvedInvocationInfo> resolvedInvocationInfo = methodsByName
+                    .getOrDefault(methodName, emptyList()).stream()
+                    .map(m -> MethodInvocationResolver.resolveMethodInvocation(m, args))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
                     .findAny();
 
-            if (method.isPresent()) {
-                Method selectedMethod = method.get();
-                log.debug("Found method: {}", selectedMethod);
+            if (resolvedInvocationInfo.isPresent()) {
+                log.debug("Resolved method invocation: {}", resolvedInvocationInfo.get());
                 try {
-                    Object result = selectedMethod.invoke(service,
-                            unpack(args.iterator(), selectedMethod.getParameterTypes()));
+                    Any result = resolvedInvocationInfo.get().callWith(service);
                     sendResult(result, out);
                     log.debug("Successfully processed method invocation");
-                } catch (IllegalAccessException | InvocationTargetException e) {
+                } catch (InvocationTargetException e) {
+                    sendError(e.getCause(), out);
+                } catch (Exception e) {
                     sendError(e, out);
                 }
             } else {
@@ -160,30 +160,19 @@ public class ProtobufServer implements Runnable, Closeable {
             }
         }
 
-        private void sendResult(Object result, OutputStream out) {
-            if (result instanceof String) {
-                log.debug("Wrapping String return value into StringValue");
-                result = StringValue.newBuilder()
-                        .setValue(result.toString())
-                        .build();
-            }
-            if (result instanceof Message) {
-                log.debug("Method invocation returned value: {}", result);
-                try {
-                    Api.Result.newBuilder().setSuccessResult(
-                            Any.pack((Message) result)
-                    ).build().writeDelimitedTo(out);
-                    out.flush();
-                } catch (IOException e) {
-                    log.warn("Error writing success response", e);
-                    closeQuietly(out);
-                }
-            } else {
-                sendError(new IllegalStateException("Return type is not a valid RPC type: " + result), out);
+        private void sendResult(Any result, OutputStream out) {
+            log.debug("Method invocation returned value: {}", result);
+            try {
+                Api.Result.newBuilder().setSuccessResult(result).build()
+                        .writeDelimitedTo(out);
+                out.flush();
+            } catch (IOException e) {
+                log.warn("Error writing success response", e);
+                closeQuietly(out);
             }
         }
 
-        private void sendError(Exception e, OutputStream out) {
+        private void sendError(Throwable e, OutputStream out) {
             try {
                 Api.Result.newBuilder().setException(Api.Exception.newBuilder()
                         .setType(e.getClass().getName())
@@ -194,52 +183,6 @@ public class ProtobufServer implements Runnable, Closeable {
                 log.warn("Error writing response", e1);
                 closeQuietly(out);
             }
-        }
-
-        @SuppressWarnings("unchecked")
-        private static Object[] unpack(Iterator<Any> args, Class[] parameterTypes) {
-            Object[] result = new Object[parameterTypes.length];
-            for (int i = 0; i < parameterTypes.length; i++) {
-                try {
-                    Class type = parameterTypes[i];
-                    boolean unwrap = false;
-                    if (type.equals(String.class)) {
-                        type = StringValue.class;
-                        unwrap = true;
-                    }
-                    Message unpackedValue = args.next().unpack(type);
-                    if (unwrap) {
-                        result[i] = ((StringValue) unpackedValue).getValue();
-                    } else {
-                        result[i] = unpackedValue;
-                    }
-                } catch (InvalidProtocolBufferException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            return result;
-        }
-
-        private static boolean matchesArgTypes(Method method, Iterator<Any> args) {
-            Class[] argTypes = method.getParameterTypes();
-            for (Class<?> paramType : argTypes) {
-                if (paramType.equals(String.class)) {
-                    paramType = StringValue.class;
-                }
-                if (Message.class.isAssignableFrom(paramType)) {
-                    Class<? extends Message> messageType = paramType.asSubclass(Message.class);
-                    if (args.hasNext()) {
-                        Any argType = args.next();
-                        boolean match = argType.is(messageType);
-                        if (!match) {
-                            return false;
-                        }
-                    } else {
-                        return false;
-                    }
-                }
-            }
-            return true;
         }
 
     }
