@@ -22,6 +22,10 @@ import java.lang.reflect.Method;
 import java.net.Socket;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 import static java.util.stream.Collectors.toList;
 
@@ -29,6 +33,33 @@ import static java.util.stream.Collectors.toList;
  * TCP Protobuf-based {@link InvocationHandler}.
  */
 public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseable {
+
+    private static final Map<Class<?>, Function<Object, Any>> packFunctions;
+
+    static {
+        Map<Class<?>, Function<Object, Any>> packFunctions_ = new HashMap<>(9);
+
+        packFunctions_.put(String.class, object ->
+                Any.pack(StringValue.newBuilder().setValue((String) object).build()));
+        packFunctions_.put(Character.class, object ->
+                Any.pack(StringValue.newBuilder().setValue(object.toString()).build()));
+        packFunctions_.put(Boolean.class, object ->
+                Any.pack(BoolValue.newBuilder().setValue((boolean) object).build()));
+        packFunctions_.put(Integer.class, object ->
+                Any.pack(Int32Value.newBuilder().setValue((int) object).build()));
+        packFunctions_.put(Short.class, object ->
+                Any.pack(Int32Value.newBuilder().setValue((short) object).build()));
+        packFunctions_.put(Long.class, object ->
+                Any.pack(Int64Value.newBuilder().setValue((long) object).build()));
+        packFunctions_.put(Float.class, object ->
+                Any.pack(FloatValue.newBuilder().setValue((float) object).build()));
+        packFunctions_.put(Double.class, object ->
+                Any.pack(DoubleValue.newBuilder().setValue((double) object).build()));
+        packFunctions_.put(Byte.class, object ->
+                Any.pack(BytesValue.newBuilder().setValue(ByteString.copyFrom(new byte[]{(byte) object})).build()));
+
+        packFunctions = Collections.unmodifiableMap(packFunctions_);
+    }
 
     private static final Logger log = LoggerFactory.getLogger(ProtobufInvocationHandler.class);
 
@@ -93,7 +124,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
      *
      * @param object to convert
      * @return converted object if possible. If object is null, null is returned.
-     * @throws ClassCastException if a conversion is not possible.
+     * @throws IllegalArgumentException if a conversion is not possible.
      */
     static Any packedMessage(Object object) {
         if (object == null) {
@@ -102,29 +133,14 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
         if (object instanceof Message) {
             return Any.pack((Message) object);
         }
-        if (object instanceof String || object instanceof Character) {
-            return Any.pack(StringValue.newBuilder().setValue(object.toString()).build());
-        }
-        if (object instanceof Boolean) {
-            return Any.pack(BoolValue.newBuilder().setValue((boolean) object).build());
-        }
-        if (object instanceof Integer || object instanceof Short) {
-            return Any.pack(Int32Value.newBuilder().setValue(((Number) object).intValue()).build());
-        }
-        if (object instanceof Long) {
-            return Any.pack(Int64Value.newBuilder().setValue((long) object).build());
-        }
-        if (object instanceof Float) {
-            return Any.pack(FloatValue.newBuilder().setValue((float) object).build());
-        }
-        if (object instanceof Double) {
-            return Any.pack(DoubleValue.newBuilder().setValue((double) object).build());
-        }
-        if (object instanceof Byte) {
-            return Any.pack(BytesValue.newBuilder().setValue(ByteString.copyFrom(new byte[]{(byte) object})).build());
+
+        Function<Object, Any> packFun = packFunctions.get(object.getClass());
+
+        if (packFun != null) {
+            return packFun.apply(object);
         }
 
-        throw new ClassCastException("Cannot cast " + object.getClass() + " to " + Any.class);
+        throw new IllegalArgumentException("Cannot pack " + object.getClass() + " into " + Any.class);
     }
 
     @Override

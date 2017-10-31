@@ -45,7 +45,7 @@ final class MethodInvocationResolver {
     private static final Map<Class<?>, TypeConverter> typeConverters;
 
     static {
-        Map<Class<?>, Class<?>> boxedTypes_ = new HashMap<>(8, 1.0f);
+        Map<Class<?>, Class<?>> boxedTypes_ = new HashMap<>(8);
         boxedTypes_.put(boolean.class, Boolean.class);
         boxedTypes_.put(byte.class, Byte.class);
         boxedTypes_.put(short.class, Short.class);
@@ -57,7 +57,7 @@ final class MethodInvocationResolver {
 
         boxedTypes = Collections.unmodifiableMap(boxedTypes_);
 
-        Map<Class<?>, TypeConverter> typeConverters_ = new HashMap<>(9, 1.0f);
+        Map<Class<?>, TypeConverter> typeConverters_ = new HashMap<>(9);
 
         typeConverters_.put(String.class, any -> {
             String result = any.is(StringValue.class) ? any.unpack(StringValue.class).getValue() : null;
