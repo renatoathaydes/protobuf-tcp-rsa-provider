@@ -177,7 +177,7 @@ final class MethodInvocationResolver {
         Any callWith(Object object)
                 throws InvocationTargetException, IllegalAccessException {
             Object result = method.invoke(object, parameters);
-            Any message = ProtobufInvocationHandler.toMessage(result);
+            Any message = ProtobufInvocationHandler.packedMessage(result);
             if (message == null) {
                 if (method.getReturnType().equals(void.class)) {
                     return Any.pack(StringValue.getDefaultInstance());

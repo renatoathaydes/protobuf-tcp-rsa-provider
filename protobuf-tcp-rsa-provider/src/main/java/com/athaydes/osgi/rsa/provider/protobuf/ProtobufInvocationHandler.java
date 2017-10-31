@@ -43,7 +43,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
         MethodInvocation invocation = MethodInvocation.newBuilder()
                 .setMethodName(method.getName())
                 .addAllArgs(Arrays.stream(args == null ? new Object[]{} : args)
-                        .map(ProtobufInvocationHandler::toMessage)
+                        .map(ProtobufInvocationHandler::packedMessage)
                         .peek(msg -> {
                             if (msg == null) {
                                 throw new NullPointerException("Remote method invocation cannot accept null argument");
@@ -95,7 +95,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
      * @return converted object if possible. If object is null, null is returned.
      * @throws ClassCastException if a conversion is not possible.
      */
-    static Any toMessage(Object object) {
+    static Any packedMessage(Object object) {
         if (object == null) {
             return null;
         }
@@ -109,7 +109,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             return Any.pack(BoolValue.newBuilder().setValue((boolean) object).build());
         }
         if (object instanceof Integer || object instanceof Short) {
-            return Any.pack(Int32Value.newBuilder().setValue((int) object).build());
+            return Any.pack(Int32Value.newBuilder().setValue(((Number) object).intValue()).build());
         }
         if (object instanceof Long) {
             return Any.pack(Int64Value.newBuilder().setValue((long) object).build());
