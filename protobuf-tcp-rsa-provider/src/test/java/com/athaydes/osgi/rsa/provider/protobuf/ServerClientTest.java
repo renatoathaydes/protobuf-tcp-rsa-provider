@@ -60,18 +60,19 @@ public class ServerClientTest {
         // server should be running now
         waitForSocketToBind(EXAMPLE_SERVICE_PORT);
 
-        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + EXAMPLE_SERVICE_PORT));
+        try (ProtobufInvocationHandler handler = new ProtobufInvocationHandler(
+                URI.create("tcp://127.0.0.1:" + EXAMPLE_SERVICE_PORT))) {
+            // make a RPC call
+            Object result = handler.invoke(exampleService, exampleService.callMethod,
+                    new Object[]{StringValue.newBuilder().setValue("hello").build()});
 
-        // make a RPC call
-        Object result = handler.invoke(exampleService, exampleService.callMethod,
-                new Object[]{StringValue.newBuilder().setValue("hello").build()});
+            // ensure the result is correct
+            assertThat(result, equalTo(exampleMethodInvocation));
 
-        // ensure the result is correct
-        assertThat(result, equalTo(exampleMethodInvocation));
-
-        // ensure the method was really called
-        String arg = exampleService.calls.removeFirst();
-        assertThat(arg, equalTo("hello"));
+            // ensure the method was really called
+            String arg = exampleService.calls.removeFirst();
+            assertThat(arg, equalTo("hello"));
+        }
     }
 
     @Test
@@ -82,21 +83,22 @@ public class ServerClientTest {
         // server should be running now
         waitForSocketToBind(EXAMPLE_SERVICE_PORT);
 
-        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + EXAMPLE_SERVICE_PORT));
+        try (ProtobufInvocationHandler handler = new ProtobufInvocationHandler(
+                URI.create("tcp://127.0.0.1:" + EXAMPLE_SERVICE_PORT))) {
+            // wrap handler into a Proxy
+            Service proxyService = (Service) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+                    new Class[]{Service.class}, handler);
 
-        // wrap handler into a Proxy
-        Service proxyService = (Service) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
-                new Class[]{Service.class}, handler);
+            // make a indirect RPC call using the proxy
+            Object result = proxyService.call(StringValue.newBuilder().setValue("bye").build());
 
-        // make a indirect RPC call using the proxy
-        Object result = proxyService.call(StringValue.newBuilder().setValue("bye").build());
+            // ensure the result is correct
+            assertThat(result, equalTo(exampleMethodInvocation));
 
-        // ensure the result is correct
-        assertThat(result, equalTo(exampleMethodInvocation));
-
-        // ensure the method was really called
-        String arg = exampleService.calls.removeFirst();
-        assertThat(arg, equalTo("bye"));
+            // ensure the method was really called
+            String arg = exampleService.calls.removeFirst();
+            assertThat(arg, equalTo("bye"));
+        }
     }
 
     @Test
@@ -107,29 +109,30 @@ public class ServerClientTest {
         // server should be running now
         waitForSocketToBind(JAVA_SERVICE_PORT);
 
-        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + JAVA_SERVICE_PORT));
+        try (ProtobufInvocationHandler handler = new ProtobufInvocationHandler(
+                URI.create("tcp://127.0.0.1:" + JAVA_SERVICE_PORT))) {
+            // wrap handler into a Proxy
+            JavaService proxyService = (JavaService) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+                    new Class[]{JavaService.class}, handler);
 
-        // wrap handler into a Proxy
-        JavaService proxyService = (JavaService) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
-                new Class[]{JavaService.class}, handler);
+            // make a indirect RPC call using the proxy
+            String result = proxyService.sum("Sum = ", 2, 3.25f, true);
 
-        // make a indirect RPC call using the proxy
-        String result = proxyService.sum("Sum = ", 2, 3.25f, true);
+            // ensure the result is correct
+            assertThat(result, equalTo("Sum = 5.25"));
 
-        // ensure the result is correct
-        assertThat(result, equalTo("Sum = 5.25"));
+            // second call
+            result = proxyService.sum("", 1, 0.5f, false);
 
-        // second call
-        result = proxyService.sum("", 1, 0.5f, false);
+            // ensure the result is correct
+            assertThat(result, equalTo("1.5"));
 
-        // ensure the result is correct
-        assertThat(result, equalTo("1.5"));
+            // second call
+            result = proxyService.sum("Result:", -1, -0.5f, true);
 
-        // second call
-        result = proxyService.sum("Result:", -1, -0.5f, true);
-
-        // ensure the result is correct
-        assertThat(result, equalTo("Result:-1.5"));
+            // ensure the result is correct
+            assertThat(result, equalTo("Result:-1.5"));
+        }
     }
 
     @Test
@@ -140,19 +143,20 @@ public class ServerClientTest {
         // server should be running now
         waitForSocketToBind(RUNNER_SERVICE_PORT);
 
-        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + RUNNER_SERVICE_PORT));
+        try (ProtobufInvocationHandler handler = new ProtobufInvocationHandler(
+                URI.create("tcp://127.0.0.1:" + RUNNER_SERVICE_PORT))) {
+            // wrap handler into a Proxy
+            Runnable proxyService = (Runnable) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+                    new Class[]{Runnable.class}, handler);
 
-        // wrap handler into a Proxy
-        Runnable proxyService = (Runnable) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
-                new Class[]{Runnable.class}, handler);
+            // make a few indirect RPC calls using the proxy
+            proxyService.run();
+            proxyService.run();
+            proxyService.run();
 
-        // make a few indirect RPC calls using the proxy
-        proxyService.run();
-        proxyService.run();
-        proxyService.run();
-
-        // ensure the method was really called
-        assertThat(runnerService.methodCount.get(), equalTo(3));
+            // ensure the method was really called
+            assertThat(runnerService.methodCount.get(), equalTo(3));
+        }
     }
 
     private static void waitForSocketToBind(int port) throws Exception {
