@@ -2,24 +2,30 @@ package com.athaydes.osgi.rsa.provider.protobuf;
 
 import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
 import com.google.protobuf.Any;
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.StringValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.athaydes.osgi.rsa.provider.protobuf.MethodResolver.resolveMethods;
@@ -35,10 +41,9 @@ public class ProtobufServer implements Runnable, Closeable {
 
     private final int port;
     private final Object service;
-    private final AtomicReference<ServerSocket> serverSocketRef = new AtomicReference<>();
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicReference<AsynchronousServerSocketChannel> serverSocketRef = new AtomicReference<>();
     private final Map<String, List<Method>> methodsByName;
-
-    private final ExecutorService handlerService = Executors.newFixedThreadPool(5);
 
     public ProtobufServer(int port, Object service) {
         this(port, service, new Class[]{});
@@ -54,135 +59,228 @@ public class ProtobufServer implements Runnable, Closeable {
     public void run() {
         log.info("Starting ProtobufServer on port " + port);
 
-        ServerSocket serverSocket;
+        AsynchronousServerSocketChannel serverSocket;
         try {
-            if (!serverSocketRef.compareAndSet(null, serverSocket = new ServerSocket(port))) {
+            if (!serverSocketRef.compareAndSet(null, serverSocket = AsynchronousServerSocketChannel.open())) {
                 throw new RuntimeException("Server already running");
             }
+            serverSocket.bind(new InetSocketAddress("127.0.0.1", port));
         } catch (IOException e) {
             log.warn("Error starting server", e);
             throw new RuntimeException(e);
         }
 
-        boolean running = true;
+        log.info("Accepting client connections");
+        running.set(true);
 
-        while (running) {
-            log.debug("Waiting for new client");
-            Socket clientSocket = null;
-            try {
-                clientSocket = serverSocket.accept();
-                log.debug("Accepting connection from: {}", clientSocket.getInetAddress());
-                handlerService.submit(new Handler(service, methodsByName, clientSocket));
-            } catch (SocketException e) {
-                log.info("Client disconnected: {}", e.getMessage());
-            } catch (IOException e) {
-                log.warn("Error while handing over client to worker", e);
-                running = false;
-            } catch (RejectedExecutionException e) {
-                log.warn("This service has been stopped and cannot respond anymore!");
-                if (clientSocket != null) {
-                    closeQuietly(clientSocket);
+        serverSocket.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+            @Override
+            public void completed(AsynchronousSocketChannel clientSocket,
+                                  Void ignore) {
+                if (running.get()) {
+                    try {
+                        log.debug("Accepting connection from: {}", clientSocket.getRemoteAddress());
+                        serverSocket.accept(null, this);
+                        new Handler(service, methodsByName, clientSocket).run();
+                    } catch (IOException e) {
+                        log.warn("Unable to get client remote address");
+                        closeQuietly(clientSocket);
+                    }
+                } else {
+                    closeQuietly(serverSocket);
                 }
-                running = false;
             }
-            if (Thread.currentThread().isInterrupted()) {
-                log.info("Server Thread has been interrupted, server no longer listening");
-                running = false;
+
+            @Override
+            public void failed(Throwable exc, Void serverSocket) {
+                if (exc instanceof AsynchronousCloseException) {
+                    log.debug("Client closed connection");
+                } else {
+                    log.warn("Failed to accept client socket", exc);
+                }
             }
-        }
+        });
     }
 
     @Override
     public void close() {
         log.info("Stopping server");
-        ServerSocket serverSocket = serverSocketRef.get();
+        running.set(false);
+        AsynchronousServerSocketChannel serverSocket = serverSocketRef.get();
         if (serverSocket != null) {
             closeQuietly(serverSocket);
         }
-        handlerService.shutdown();
     }
 
-    private static class Handler implements Runnable {
+    private static class Handler implements CompletionHandler<Integer, ByteBuffer> {
+
+        private static final int MESSAGE_LENGTH = 1;
 
         private final Object service;
         private final Map<String, List<Method>> methodsByName;
-        private final Socket clientSocket;
+        private final AsynchronousSocketChannel clientSocket;
+        private final AtomicInteger bytesReceived = new AtomicInteger(0);
 
         Handler(Object service,
                 Map<String, List<Method>> methodsByName,
-                Socket clientSocket) {
+                AsynchronousSocketChannel clientSocket) {
             this.service = service;
             this.methodsByName = methodsByName;
             this.clientSocket = clientSocket;
         }
 
+        void run() {
+            ByteBuffer lengthBuffer = allocateLengthBuffer();
+            clientSocket.read(lengthBuffer, 5, TimeUnit.SECONDS, lengthBuffer, this);
+        }
+
+        private static ByteBuffer allocateLengthBuffer() {
+            return ByteBuffer.allocate(MESSAGE_LENGTH);
+        }
+
         @Override
-        public void run() {
-            Api.MethodInvocation message;
-            OutputStream out = null;
-            try {
-                out = clientSocket.getOutputStream();
-                message = Api.MethodInvocation.parseDelimitedFrom(clientSocket.getInputStream());
-            } catch (IOException e) {
-                log.warn("Error parsing message", e);
-                if (out != null) {
-                    sendError(e, out);
-                }
+        public void completed(Integer bytesCount, ByteBuffer lengthBuffer) {
+            if (bytesCount < 0) {
+                log.debug("Received bytesCount = {}, closing client socket", bytesCount);
+                closeQuietly(clientSocket);
+                return;
+            }
+            int received = bytesReceived.addAndGet(bytesCount);
+
+            if (received < MESSAGE_LENGTH) {
+                log.debug("Received {} bytes so far, waiting for a total of {}.", received, MESSAGE_LENGTH);
+                clientSocket.read(lengthBuffer, 5, TimeUnit.SECONDS, lengthBuffer, this);
                 return;
             }
 
-            String methodName = message.getMethodName();
-            List<Any> args = message.getArgsList();
-
-            log.debug("Looking up method '{}' of service {}", methodName, service);
-
-            Optional<MethodInvocationResolver.ResolvedInvocationInfo> resolvedInvocationInfo = methodsByName
-                    .getOrDefault(methodName, emptyList()).stream()
-                    .map(m -> MethodInvocationResolver.resolveMethodInvocation(m, args))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .findAny();
-
-            if (resolvedInvocationInfo.isPresent()) {
-                log.debug("Resolved method invocation: {}", resolvedInvocationInfo.get());
-                try {
-                    Any result = resolvedInvocationInfo.get().callWith(service);
-                    sendResult(result, out);
-                    log.debug("Successfully processed method invocation");
-                } catch (InvocationTargetException e) {
-                    sendError(e.getCause(), out);
-                } catch (Exception e) {
-                    sendError(e, out);
-                }
-            } else {
-                log.debug("Method not found");
-                sendError(new NoSuchMethodException(methodName), out);
-            }
-        }
-
-        private void sendResult(Any result, OutputStream out) {
-            log.debug("Method invocation returned value: {}", result);
+            lengthBuffer.flip();
+            int messageLength;
             try {
-                Api.Result.newBuilder().setSuccessResult(result).build()
-                        .writeDelimitedTo(out);
-                out.flush();
+                messageLength = CodedInputStream.newInstance(lengthBuffer).readRawVarint32();
             } catch (IOException e) {
-                log.warn("Error writing success response", e);
-                closeQuietly(out);
+                // should never happen, the stream is backed by a memory buffer
+                sendError(e);
+                return;
+            }
+            log.debug("Expecting message with length {}", messageLength);
+            if (messageLength <= 0) {
+                sendError(new IllegalArgumentException("Invalid message length"));
+                return;
+            }
+            ByteBuffer msgBuffer = ByteBuffer.allocate(messageLength);
+            clientSocket.read(msgBuffer, 10, TimeUnit.SECONDS, msgBuffer, new ServiceMethodInvoker(messageLength));
+        }
+
+        @Override
+        public void failed(Throwable exc, ByteBuffer lengthBuffer) {
+            sendError(exc);
+        }
+
+        private void sendError(Throwable error) {
+            Api.Result response = Api.Result.newBuilder().setException(Api.Exception.newBuilder()
+                    .setType(error.getClass().getName())
+                    .setMessage(Optional.ofNullable(error.getMessage()).orElse(""))
+                    .build()).build();
+
+            sendResult(response);
+        }
+
+        private void sendResult(Api.Result result) {
+            int resultLength = result.getSerializedSize();
+            ByteBuffer buffer = ByteBuffer.allocate(resultLength + 4);
+            try {
+                CodedOutputStream.newInstance(buffer).writeRawVarint32(resultLength);
+                log.debug("Sending result to client: {}", result);
+                result.writeTo(CodedOutputStream.newInstance(buffer));
+                ByteArrayOutputStream out = new ByteArrayOutputStream(result.getSerializedSize() + 4);
+                result.writeDelimitedTo(out);
+                clientSocket.write(ByteBuffer.wrap(out.toByteArray()));
+            } catch (IOException ignore) {
+                // never happens, write is async
+            } finally {
+                acceptNewInvocation();
             }
         }
 
-        private void sendError(Throwable e, OutputStream out) {
-            try {
-                Api.Result.newBuilder().setException(Api.Exception.newBuilder()
-                        .setType(e.getClass().getName())
-                        .setMessage(e.getMessage())
-                        .build()).build().writeDelimitedTo(out);
-                out.flush();
-            } catch (IOException e1) {
-                log.warn("Error writing response", e1);
-                closeQuietly(out);
+        private void acceptNewInvocation() {
+            bytesReceived.set(0);
+            ByteBuffer lengthBuffer = allocateLengthBuffer();
+            clientSocket.read(lengthBuffer, 5, TimeUnit.SECONDS, lengthBuffer, Handler.this);
+        }
+
+        private class ServiceMethodInvoker implements CompletionHandler<Integer, ByteBuffer> {
+
+            private final int messageLength;
+            private final AtomicInteger bytesReceived = new AtomicInteger(0);
+
+            ServiceMethodInvoker(int messageLength) {
+                this.messageLength = messageLength;
             }
+
+            @Override
+            public void completed(Integer bytesCount, ByteBuffer msgBuffer) {
+                if (bytesCount < 0) {
+                    log.debug("Received bytesCount = {}, closing client socket", bytesCount);
+                    closeQuietly(clientSocket);
+                    return;
+                }
+
+                int received = bytesReceived.addAndGet(bytesCount);
+
+                if (received < messageLength) {
+                    log.debug("Received {} bytes so far, waiting for a total of {}.", received, messageLength);
+                    clientSocket.read(msgBuffer, 5, TimeUnit.SECONDS, msgBuffer, this);
+                    return;
+                }
+
+                log.debug("Received full message with length {}, parsing it.", messageLength);
+                msgBuffer.flip();
+                Api.MethodInvocation message;
+                try {
+                    message = Api.MethodInvocation.parseFrom(CodedInputStream.newInstance(msgBuffer));
+                } catch (InvalidProtocolBufferException e) {
+                    sendError(new RuntimeException("Could not parse message: " + e));
+                    return;
+                } catch (IOException e) {
+                    // should not happen, the msgBuffer is read from the socket already
+                    sendError(e);
+                    return;
+                }
+
+                String methodName = message.getMethodName();
+                List<Any> args = message.getArgsList();
+
+                log.debug("Looking up method '{}' of service {}", methodName, service);
+
+                Optional<MethodInvocationResolver.ResolvedInvocationInfo> resolvedInvocationInfo = methodsByName
+                        .getOrDefault(methodName, emptyList()).stream()
+                        .map(m -> MethodInvocationResolver.resolveMethodInvocation(m, args))
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .findAny();
+
+                if (resolvedInvocationInfo.isPresent()) {
+                    log.debug("Resolved method invocation: {}", resolvedInvocationInfo.get());
+                    try {
+                        Any result = resolvedInvocationInfo.get().callWith(service);
+                        sendResult(Api.Result.newBuilder().setSuccessResult(result).build());
+                        log.debug("Successfully processed method invocation");
+                    } catch (InvocationTargetException e) {
+                        sendError(e.getCause());
+                    } catch (Exception e) {
+                        sendError(e);
+                    }
+                } else {
+                    log.debug("Method not found");
+                    sendError(new NoSuchMethodException(methodName));
+                }
+            }
+
+            @Override
+            public void failed(Throwable exc, ByteBuffer attachment) {
+                sendError(exc);
+            }
+
         }
 
     }
