@@ -25,8 +25,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static com.athaydes.osgi.rsa.provider.protobuf.Utils.closeQuietly;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -64,6 +67,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
     private static final Logger log = LoggerFactory.getLogger(ProtobufInvocationHandler.class);
 
     private final URI address;
+    private final AtomicReference<Socket> socketRef = new AtomicReference<>();
 
     ProtobufInvocationHandler(URI address) {
         this.address = address;
@@ -71,6 +75,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws RuntimeException {
+        log.debug("Calling remote method '{}'", method.getName());
         MethodInvocation invocation = MethodInvocation.newBuilder()
                 .setMethodName(method.getName())
                 .addAllArgs(Arrays.stream(args == null ? new Object[]{} : args)
@@ -83,8 +88,10 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
 
         Api.Result result;
 
-        try (Socket socket = new Socket(address.getHost(), address.getPort())) {
-            log.debug("Connected to server {}, sending data", address);
+        try {
+            Socket socket = createOrReuseSocket();
+            log.debug("Connected to server {}, sending message with length: {}",
+                    address, invocation.getSerializedSize());
             OutputStream out = socket.getOutputStream();
             invocation.writeDelimitedTo(out);
             out.flush();
@@ -92,6 +99,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             log.debug("Waiting for server response");
             result = Api.Result.parseDelimitedFrom(socket.getInputStream());
         } catch (IOException e) {
+            socketRef.set(null);
             throw new RuntimeException(e);
         }
 
@@ -116,6 +124,22 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
                         result.getException().getType(), result.getException().getMessage()));
             default:
                 return null;
+        }
+    }
+
+    private Socket createOrReuseSocket() throws IOException {
+        Socket oldSocket = socketRef.get();
+        if (oldSocket != null && oldSocket.isConnected()) {
+            log.info("Reusing socket for {}", address);
+            return oldSocket;
+        } else {
+            if (oldSocket != null) {
+                closeQuietly(oldSocket);
+            }
+            log.info("Creating new socket for {}", address);
+            Socket newSocket = new Socket(address.getHost(), address.getPort());
+            socketRef.set(newSocket);
+            return newSocket;
         }
     }
 
@@ -145,7 +169,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
 
     @Override
     public void close() {
-        // TODO keep socket around then close it here
+        Optional.ofNullable(socketRef.getAndSet(null)).ifPresent(Utils::closeQuietly);
     }
 
 }
