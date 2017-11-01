@@ -11,11 +11,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.Socket;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.LongStream;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
@@ -135,10 +137,11 @@ public class ServerClientTest {
         }
     }
 
+    @SuppressWarnings("ConstantConditions")
     @Test
     public void testRunnerServiceReturningVoid() throws Throwable {
         // start the server
-        serverThread.submit(runnerServer);
+        runnerServer.run();
 
         // server should be running now
         waitForSocketToBind(RUNNER_SERVICE_PORT);
@@ -149,10 +152,22 @@ public class ServerClientTest {
             Runnable proxyService = (Runnable) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
                     new Class[]{Runnable.class}, handler);
 
+            long[] times = new long[3];
+            long startTime = System.nanoTime();
+
             // make a few indirect RPC calls using the proxy
             proxyService.run();
+            times[0] = System.nanoTime() - startTime;
+            startTime = System.nanoTime();
             proxyService.run();
+            times[1] = System.nanoTime() - startTime;
+            startTime = System.nanoTime();
             proxyService.run();
+            times[2] = System.nanoTime() - startTime;
+
+            // show how long the RPC calls took
+            System.out.printf("3 RPC calls times (ns): %s\nAverage: %2f ns",
+                    Arrays.toString(times), LongStream.of(times).average().getAsDouble());
 
             // ensure the method was really called
             assertThat(runnerService.methodCount.get(), equalTo(3));
