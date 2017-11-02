@@ -180,7 +180,7 @@ final class MethodInvocationResolver {
             Any message = ProtobufInvocationHandler.packedMessage(result);
             if (message == null) {
                 if (method.getReturnType().equals(void.class)) {
-                    return Any.pack(StringValue.getDefaultInstance());
+                    return Any.getDefaultInstance();
                 } else {
                     throw new NullPointerException("Remote service cannot return null value");
                 }
