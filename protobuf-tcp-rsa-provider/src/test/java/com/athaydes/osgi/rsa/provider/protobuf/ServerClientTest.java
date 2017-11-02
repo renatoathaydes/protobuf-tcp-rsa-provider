@@ -1,58 +1,17 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
-import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
-import com.google.protobuf.Any;
 import com.google.protobuf.StringValue;
-import org.junit.After;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.net.Socket;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Deque;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.LongStream;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
-public class ServerClientTest {
-
-    private static final int EXAMPLE_SERVICE_PORT = 5556;
-    private static final int JAVA_SERVICE_PORT = 5557;
-    private static final int RUNNER_SERVICE_PORT = 5558;
-
-    private final ExecutorService serverThread = Executors.newSingleThreadExecutor();
-
-    private static final Api.MethodInvocation exampleMethodInvocation = Api.MethodInvocation.newBuilder()
-            .setMethodName("serverMethod")
-            .addArgs(Any.pack(StringValue.newBuilder().setValue("some-arg").build()))
-            .build();
-
-    private final ExampleService exampleService = new ExampleService();
-
-    private final JavaService javaService = (prefix, a, b, showPrefix) ->
-            (showPrefix ? prefix : "") + (a + b);
-
-    private final Runner runnerService = new Runner();
-
-    private final ProtobufServer exampleServer = new ProtobufServer(EXAMPLE_SERVICE_PORT, exampleService);
-    private final ProtobufServer javaServer = new ProtobufServer(JAVA_SERVICE_PORT, javaService);
-    private final ProtobufServer runnerServer = new ProtobufServer(RUNNER_SERVICE_PORT, runnerService);
-
-    @After
-    public void cleanup() {
-        exampleServer.close();
-        javaServer.close();
-        runnerServer.close();
-        serverThread.shutdownNow();
-    }
+public class ServerClientTest extends TestsCommunication {
 
     @Test
     public void testServerClient() throws Throwable {
@@ -171,64 +130,6 @@ public class ServerClientTest {
 
             // ensure the method was really called
             assertThat(runnerService.methodCount.get(), equalTo(3));
-        }
-    }
-
-    private static void waitForSocketToBind(int port) throws Exception {
-        long giveupTime = System.currentTimeMillis() + 5000;
-        while (true) {
-            try {
-                Socket socket = new Socket("127.0.0.1", port);
-                socket.getOutputStream();
-                System.out.println("Successfully connected to server");
-                socket.close();
-                return;
-            } catch (IOException e) {
-                if (System.currentTimeMillis() > giveupTime) {
-                    throw new RuntimeException("Timeout waiting for server to bind to port " + port);
-                }
-                Thread.sleep(250L);
-            }
-        }
-    }
-
-    public interface Service {
-        Api.MethodInvocation call(StringValue text);
-    }
-
-    public interface JavaService {
-        String sum(String prefix, int a, float b, boolean showPrefix);
-    }
-
-    public static class ExampleService implements Service {
-
-        final Method callMethod;
-
-        ExampleService() {
-            try {
-                callMethod = ExampleService.class.getMethod("call", StringValue.class);
-            } catch (NoSuchMethodException e) {
-                throw new ExceptionInInitializerError("Could not find the call method");
-            }
-        }
-
-        final Deque<String> calls = new ConcurrentLinkedDeque<>();
-
-        @Override
-        public Api.MethodInvocation call(StringValue text) {
-            calls.add(text.getValue());
-            return exampleMethodInvocation;
-        }
-
-    }
-
-    public static class Runner implements Runnable {
-
-        private final AtomicInteger methodCount = new AtomicInteger();
-
-        @Override
-        public void run() {
-            methodCount.incrementAndGet();
         }
     }
 
