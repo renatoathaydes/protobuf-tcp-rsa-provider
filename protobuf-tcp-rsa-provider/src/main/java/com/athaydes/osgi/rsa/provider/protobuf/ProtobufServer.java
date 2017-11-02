@@ -3,7 +3,6 @@ package com.athaydes.osgi.rsa.provider.protobuf;
 import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
 import com.google.protobuf.Any;
 import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.StringValue;
 import org.slf4j.Logger;
@@ -23,6 +22,7 @@ import java.nio.channels.CompletionHandler;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -112,14 +112,11 @@ public class ProtobufServer implements Runnable, Closeable {
         }
     }
 
-    private static class Handler implements CompletionHandler<Integer, ByteBuffer> {
-
-        private static final int MESSAGE_LENGTH = 1;
+    private static class Handler implements CompletionHandler<Integer, VarIntReader> {
 
         private final Object service;
         private final Map<String, List<Method>> methodsByName;
         private final AsynchronousSocketChannel clientSocket;
-        private final AtomicInteger bytesReceived = new AtomicInteger(0);
 
         Handler(Object service,
                 Map<String, List<Method>> methodsByName,
@@ -130,49 +127,42 @@ public class ProtobufServer implements Runnable, Closeable {
         }
 
         void run() {
-            ByteBuffer lengthBuffer = allocateLengthBuffer();
-            clientSocket.read(lengthBuffer, 5, TimeUnit.SECONDS, lengthBuffer, this);
-        }
-
-        private static ByteBuffer allocateLengthBuffer() {
-            return ByteBuffer.allocate(MESSAGE_LENGTH);
+            VarIntReader reader = new VarIntReader();
+            clientSocket.read(reader.buffer(), 5, TimeUnit.SECONDS, reader, this);
         }
 
         @Override
-        public void completed(Integer bytesCount, ByteBuffer lengthBuffer) {
+        public void completed(Integer bytesCount, VarIntReader lengthReader) {
             if (bytesCount < 0) {
                 log.debug("Received bytesCount = {}, closing client socket", bytesCount);
                 closeQuietly(clientSocket);
                 return;
             }
-            int received = bytesReceived.addAndGet(bytesCount);
 
-            if (received < MESSAGE_LENGTH) {
-                log.debug("Received {} bytes so far, waiting for a total of {}.", received, MESSAGE_LENGTH);
-                clientSocket.read(lengthBuffer, 5, TimeUnit.SECONDS, lengthBuffer, this);
-                return;
-            }
-
-            lengthBuffer.flip();
-            int messageLength;
+            OptionalInt length;
             try {
-                messageLength = CodedInputStream.newInstance(lengthBuffer).readRawVarint32();
+                length = lengthReader.read();
+                if (!length.isPresent()) {
+                    clientSocket.read(lengthReader.buffer(), 5, TimeUnit.SECONDS, lengthReader, this);
+                    return; // wait for more bytes
+                }
             } catch (IOException e) {
-                // should never happen, the stream is backed by a memory buffer
                 sendError(e);
                 return;
             }
+
+            int messageLength = length.getAsInt();
             log.debug("Expecting message with length {}", messageLength);
             if (messageLength <= 0) {
                 sendError(new IllegalArgumentException("Invalid message length"));
-                return;
+            } else {
+                ByteBuffer msgBuffer = ByteBuffer.allocate(messageLength);
+                clientSocket.read(msgBuffer, 10, TimeUnit.SECONDS, msgBuffer, new ServiceMethodInvoker(messageLength));
             }
-            ByteBuffer msgBuffer = ByteBuffer.allocate(messageLength);
-            clientSocket.read(msgBuffer, 10, TimeUnit.SECONDS, msgBuffer, new ServiceMethodInvoker(messageLength));
         }
 
         @Override
-        public void failed(Throwable exc, ByteBuffer lengthBuffer) {
+        public void failed(Throwable exc, VarIntReader reader) {
             sendError(exc);
         }
 
@@ -187,25 +177,17 @@ public class ProtobufServer implements Runnable, Closeable {
 
         private void sendResult(Api.Result result) {
             int resultLength = result.getSerializedSize();
-            ByteBuffer buffer = ByteBuffer.allocate(resultLength + 4);
+            ByteArrayOutputStream out = new ByteArrayOutputStream(resultLength + 4);
             try {
-                CodedOutputStream.newInstance(buffer).writeRawVarint32(resultLength);
                 log.debug("Sending result to client: {}", result);
-                result.writeTo(CodedOutputStream.newInstance(buffer));
-                ByteArrayOutputStream out = new ByteArrayOutputStream(result.getSerializedSize() + 4);
                 result.writeDelimitedTo(out);
                 clientSocket.write(ByteBuffer.wrap(out.toByteArray()));
             } catch (IOException ignore) {
                 // never happens, write is async
             } finally {
-                acceptNewInvocation();
+                // start waiting for new invocations again
+                run();
             }
-        }
-
-        private void acceptNewInvocation() {
-            bytesReceived.set(0);
-            ByteBuffer lengthBuffer = allocateLengthBuffer();
-            clientSocket.read(lengthBuffer, 5, TimeUnit.SECONDS, lengthBuffer, Handler.this);
         }
 
         private class ServiceMethodInvoker implements CompletionHandler<Integer, ByteBuffer> {
