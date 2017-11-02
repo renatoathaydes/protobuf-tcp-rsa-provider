@@ -3,7 +3,6 @@ package com.athaydes.osgi.rsa.provider.protobuf;
 import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
 import com.google.protobuf.Any;
 import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.StringValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,7 +127,12 @@ public class ProtobufServer implements Runnable, Closeable {
 
         void run() {
             VarIntReader reader = new VarIntReader();
-            clientSocket.read(reader.buffer(), 5, TimeUnit.SECONDS, reader, this);
+            try {
+                clientSocket.read(reader.buffer(), 5, TimeUnit.SECONDS, reader, this);
+            } catch (IllegalStateException e) {
+                log.debug("Unable to continue listening to client socket due to {}", e.toString());
+                closeQuietly(clientSocket);
+            }
         }
 
         @Override
@@ -220,9 +224,6 @@ public class ProtobufServer implements Runnable, Closeable {
                 Api.MethodInvocation message;
                 try {
                     message = Api.MethodInvocation.parseFrom(CodedInputStream.newInstance(msgBuffer));
-                } catch (InvalidProtocolBufferException e) {
-                    sendError(new RuntimeException("Could not parse message: " + e));
-                    return;
                 } catch (IOException e) {
                     // should not happen, the msgBuffer is read from the socket already
                     sendError(e);

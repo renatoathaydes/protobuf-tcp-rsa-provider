@@ -2,6 +2,8 @@ package com.athaydes.osgi.rsa.provider.protobuf;
 
 import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
 import com.athaydes.osgi.rsa.provider.protobuf.api.Api.MethodInvocation;
+import com.athaydes.osgi.rsa.provider.protobuf.api.CommunicationException;
+import com.athaydes.osgi.rsa.provider.protobuf.api.RemoteException;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.ByteString;
@@ -99,8 +101,8 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             log.debug("Waiting for server response");
             result = Api.Result.parseDelimitedFrom(socket.getInputStream());
         } catch (IOException e) {
-            socketRef.set(null);
-            throw new RuntimeException(e);
+            Optional.ofNullable(socketRef.getAndSet(null)).ifPresent(Utils::closeQuietly);
+            throw new CommunicationException(e);
         }
 
         log.debug("Received result: {}", result);
@@ -112,16 +114,13 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
                 if (method.getReturnType().equals(void.class)) {
                     return null;
                 }
-                Object value = MethodInvocationResolver.tryConvert(result.getSuccessResult(), method.getReturnType());
-                if (value == null) {
-                    throw new RuntimeException(String.format("Cannot convert %s to %s",
-                            result.getSuccessResult().getTypeUrl(), method.getReturnType()));
-                } else {
-                    return value;
+                try {
+                    return MethodInvocationResolver.convert(result.getSuccessResult(), method.getReturnType());
+                } catch (IOException e) {
+                    throw new CommunicationException(e);
                 }
             case EXCEPTION:
-                throw new RuntimeException(String.format("RemoteException of type %s: %s",
-                        result.getException().getType(), result.getException().getMessage()));
+                throw new RemoteException(result.getException().getType(), result.getException().getMessage());
             default:
                 return null;
         }
@@ -130,13 +129,13 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
     private Socket createOrReuseSocket() throws IOException {
         Socket oldSocket = socketRef.get();
         if (oldSocket != null && oldSocket.isConnected()) {
-            log.info("Reusing socket for {}", address);
+            log.debug("Reusing socket for {}", address);
             return oldSocket;
         } else {
             if (oldSocket != null) {
                 closeQuietly(oldSocket);
             }
-            log.info("Creating new socket for {}", address);
+            log.debug("Creating new socket for {}", address);
             Socket newSocket = new Socket(address.getHost(), address.getPort());
             socketRef.set(newSocket);
             return newSocket;
@@ -164,7 +163,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             return packFun.apply(object);
         }
 
-        throw new IllegalArgumentException("Cannot pack " + object.getClass() + " into " + Any.class);
+        throw new IllegalArgumentException("Cannot pack " + object.getClass() + " into protobuff message");
     }
 
     @Override

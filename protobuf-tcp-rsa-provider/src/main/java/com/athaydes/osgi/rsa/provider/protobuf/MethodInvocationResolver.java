@@ -140,29 +140,35 @@ final class MethodInvocationResolver {
         return Optional.of(new ResolvedInvocationInfo(method, resolvedArgs));
     }
 
-    static Object tryConvert(Any any, Class<?> type) {
+    static Object convert(Any any, Class<?> type) throws InvalidProtocolBufferException {
         if (Message.class.isAssignableFrom(type)) {
             Class<? extends Message> messageType = type.asSubclass(Message.class);
-            if (any.is(messageType)) try {
+            if (any.is(messageType)) {
                 return any.unpack(messageType);
-            } catch (InvalidProtocolBufferException e) {
-                throw new RuntimeException("Unable to unpack message argument", e);
             }
         }
 
         // not a protobuf type, try a Java type
+        return convertJavaType(any, type);
+    }
+
+    static Object tryConvert(Any any, Class<?> type) {
         try {
-            return tryConvertJavaType(any, type);
-        } catch (InvalidProtocolBufferException e) {
+            return convert(any, type);
+        } catch (Exception e) {
             return null;
         }
     }
 
-    private static Object tryConvertJavaType(Any any, Class<?> type)
+    private static Object convertJavaType(Any any, Class<?> type)
             throws InvalidProtocolBufferException {
         Class<?> boxedType = boxedTypes.getOrDefault(type, type);
         TypeConverter converter = typeConverters.get(boxedType);
-        return converter == null ? null : converter.apply(any);
+        if (converter != null) {
+            return converter.apply(any);
+        } else {
+            throw new IllegalArgumentException("Cannot convert " + type.getClass().getName() + " to protobuf message");
+        }
     }
 
     static final class ResolvedInvocationInfo {
