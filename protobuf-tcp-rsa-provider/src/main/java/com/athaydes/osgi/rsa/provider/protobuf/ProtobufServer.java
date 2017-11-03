@@ -44,16 +44,17 @@ public class ProtobufServer implements Runnable, Closeable {
     private final AtomicReference<AsynchronousServerSocketChannel> serverSocketRef = new AtomicReference<>();
     private final Map<String, List<Method>> methodsByName;
 
-    public ProtobufServer(int port, Object service) {
-        this(port, service, new Class[]{});
-    }
-
-    public ProtobufServer(int port, Object service, Class[] exportedInterfaces) {
+    public ProtobufServer(Object service, int port, Class... exportedInterfaces) {
         this.port = port;
         this.service = service;
         this.methodsByName = resolveMethods(service, exportedInterfaces);
     }
 
+    /**
+     * Run this server.
+     * <p>
+     * This is a non-blocking call.
+     */
     @Override
     public void run() {
         log.info("Starting ProtobufServer on port " + port);
@@ -167,7 +168,8 @@ public class ProtobufServer implements Runnable, Closeable {
 
         @Override
         public void failed(Throwable exc, VarIntReader reader) {
-            sendError(exc);
+            log.debug("Handler failed: {}", exc.toString());
+            closeQuietly(clientSocket);
         }
 
         private void sendError(Throwable error) {
@@ -282,7 +284,7 @@ public class ProtobufServer implements Runnable, Closeable {
                 "  public StringValue sayHello(StringValue message)\n" +
                 "Send a message to port 5562 and this server will respond!\n");
 
-        ProtobufServer server = new ProtobufServer(5562, new HelloService());
+        ProtobufServer server = new ProtobufServer(new HelloService(), 5562);
 
         server.run();
 

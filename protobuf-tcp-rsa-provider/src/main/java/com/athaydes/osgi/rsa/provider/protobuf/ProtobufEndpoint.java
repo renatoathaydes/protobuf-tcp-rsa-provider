@@ -37,7 +37,7 @@ public class ProtobufEndpoint implements Endpoint {
         String hostName = getStringFrom(effectiveProperties, DOMAIN + ".hostname")
                 .orElse("localhost");
 
-        this.server = new ProtobufServer(port, service, exportedInterfaces);
+        this.server = new ProtobufServer(service, port, exportedInterfaces);
 
         String endpointId = String.format("tcp://%s:%s", hostName, port);
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
