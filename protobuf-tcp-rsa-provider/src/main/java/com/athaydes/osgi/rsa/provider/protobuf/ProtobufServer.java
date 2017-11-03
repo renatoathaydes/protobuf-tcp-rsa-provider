@@ -285,6 +285,16 @@ public class ProtobufServer implements Runnable, Closeable {
         ProtobufServer server = new ProtobufServer(5562, new HelloService());
 
         server.run();
+
+        System.out.println("Press enter to stop the server");
+        try {
+            //noinspection ResultOfMethodCallIgnored
+            System.in.read();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        server.close();
     }
 
 }
