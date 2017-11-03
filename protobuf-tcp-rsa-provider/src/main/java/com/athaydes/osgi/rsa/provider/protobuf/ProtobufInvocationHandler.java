@@ -36,6 +36,9 @@ import static java.util.stream.Collectors.toList;
 
 /**
  * TCP Protobuf-based {@link InvocationHandler}.
+ * <p>
+ * This class can be used to create a {@link java.lang.reflect.Proxy} for a service
+ * whose implementation is provided by a remote service.
  */
 public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseable {
 

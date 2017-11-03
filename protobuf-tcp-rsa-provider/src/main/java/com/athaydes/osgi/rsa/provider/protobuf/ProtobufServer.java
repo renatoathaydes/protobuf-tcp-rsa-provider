@@ -91,7 +91,7 @@ public class ProtobufServer implements Runnable, Closeable {
             }
 
             @Override
-            public void failed(Throwable exc, Void serverSocket) {
+            public void failed(Throwable exc, Void ignore) {
                 if (exc instanceof AsynchronousCloseException) {
                     log.debug("Client closed connection");
                 } else {

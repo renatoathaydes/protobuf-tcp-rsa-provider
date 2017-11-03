@@ -16,7 +16,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
- *
+ * <a href="http://aries.apache.org/modules/rsa.html">Apache Aries RSA</a> {@link DistributionProvider}
+ * implementation for the protobuf-tcp-rsa-provider module.
  */
 public class ProtobufProvider implements DistributionProvider {
 

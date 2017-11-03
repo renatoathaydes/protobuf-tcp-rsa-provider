@@ -12,7 +12,8 @@ import static com.athaydes.osgi.rsa.provider.protobuf.Utils.getIntFrom;
 import static com.athaydes.osgi.rsa.provider.protobuf.Utils.getStringFrom;
 
 /**
- *
+ * <a href="http://aries.apache.org/modules/rsa.html">Apache Aries RSA</a> {@link Endpoint}
+ * implementation for the protobuf-tcp-rsa-provider module.
  */
 public class ProtobufEndpoint implements Endpoint {
 
