@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
-import static com.athaydes.osgi.rsa.provider.protobuf.Utils.closeQuietly;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -74,7 +73,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
     private final URI address;
     private final AtomicReference<Socket> socketRef = new AtomicReference<>();
 
-    ProtobufInvocationHandler(URI address) {
+    public ProtobufInvocationHandler(URI address) {
         this.address = address;
     }
 
@@ -91,21 +90,36 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
                             }
                         }).collect(toList())).build();
 
-        Api.Result result;
+        Api.Result result = null;
+        int retries = 1;
 
-        try {
-            Socket socket = createOrReuseSocket();
-            log.debug("Connected to server {}, sending message with length: {}",
-                    address, invocation.getSerializedSize());
-            OutputStream out = socket.getOutputStream();
-            invocation.writeDelimitedTo(out);
-            out.flush();
+        while (retries >= 0) {
+            Socket socket = null;
+            try {
+                socket = createOrReuseSocket();
+                log.debug("Connected to server {}, sending message with length: {}",
+                        address, invocation.getSerializedSize());
+                OutputStream out = socket.getOutputStream();
+                invocation.writeDelimitedTo(out);
+                out.flush();
 
-            log.debug("Waiting for server response");
-            result = Api.Result.parseDelimitedFrom(socket.getInputStream());
-        } catch (IOException e) {
-            Optional.ofNullable(socketRef.getAndSet(null)).ifPresent(Utils::closeQuietly);
-            throw new CommunicationException(e);
+                log.debug("Waiting for server response");
+                result = Api.Result.parseDelimitedFrom(socket.getInputStream());
+                if (result == null) {
+                    throw new CommunicationException(new IOException("Received EOF"));
+                } else {
+                    break;
+                }
+            } catch (IOException e) {
+                log.debug("Problem connecting to server [retries={}]: {}", retries, e.toString());
+                socketRef.set(null);
+                Optional.ofNullable(socket).ifPresent(Utils::closeQuietly);
+                if (retries <= 0) {
+                    throw new CommunicationException(e);
+                }
+            } finally {
+                retries--;
+            }
         }
 
         log.debug("Received result: {}", result);
@@ -131,13 +145,10 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
 
     private Socket createOrReuseSocket() throws IOException {
         Socket oldSocket = socketRef.get();
-        if (oldSocket != null && oldSocket.isConnected()) {
+        if (oldSocket != null) {
             log.debug("Reusing socket for {}", address);
             return oldSocket;
         } else {
-            if (oldSocket != null) {
-                closeQuietly(oldSocket);
-            }
             log.debug("Creating new socket for {}", address);
             Socket newSocket = new Socket(address.getHost(), address.getPort());
             socketRef.set(newSocket);
