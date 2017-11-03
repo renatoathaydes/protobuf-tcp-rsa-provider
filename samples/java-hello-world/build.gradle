@@ -1,0 +1,17 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+mainClassName = 'HelloWorld'
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/']
+        }
+    }
+}
+
+dependencies {
+    compile project(':protobuf-tcp-rsa-provider')
+    runtime 'org.slf4j:slf4j-simple:1.7.25'
+}
