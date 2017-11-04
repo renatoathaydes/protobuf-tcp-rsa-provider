@@ -110,6 +110,44 @@ class ResilienceTest extends Specification {
         remoteService?.close()
     }
 
+    def "Server continues serving requests after a client socket hangs or closes"() {
+        given: '2 simple messages'
+        def message1 = 'hello remote'
+        def message2 = 'bye remote'
+
+        and: 'A remote echo service is started'
+        def remoteService = RemoteServices.provideService(new EchoServiceImpl(), 5098, EchoService)
+
+        and: 'A client is created for the remote service'
+        def localService = RemoteServices.createClient(EchoService, 'localhost', 5098)
+
+        when: 'A bad client starts sending data to the server but does not finish'
+        Socket badClient = new Socket("127.0.0.1", 5098)
+        badClient.outputStream.with {
+            write(10) // claims to send 10 bytes but sends none
+            flush()
+        }
+
+        and: 'The first message is sent out to a remote echo service by the good client'
+        def response = localService.echo(message1)
+
+        then: 'The exact same message is received back'
+        response == message1
+
+        when: 'The bad client shuts down the socket'
+        badClient.close()
+
+        and: 'The second message is sent out to a remote echo service by the good client'
+        def response2 = localService.echo(message2)
+
+        then: 'The exact same message is received back'
+        response2 == message2
+
+        cleanup:
+        badClient?.close()
+        remoteService?.close()
+    }
+
 }
 
 interface EchoService {
