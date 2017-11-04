@@ -1,0 +1,10 @@
+plugins {
+    id 'groovy'
+}
+
+sourceSets.main.groovy.srcDirs('src/')
+
+dependencies {
+    compile 'org.codehaus.groovy:groovy-all:2.4.12'
+    compile 'com.athaydes.osgi:protobuf-tcp-rsa-provider:0.1.0'
+}
