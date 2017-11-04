@@ -81,58 +81,11 @@ public class HelloWorld {
 }
 ```
 
-## Groovy client example
+Other Java examples can be found in the [samples/java](samples/java) directory.
 
-There is a sample [Groovy script client](protobuf-tcp-rsa-provider/src/scripts/groovy/test-client.groovy) which
-shows how to create a simple CLI that communicates with a remote service.
+## Samples in other languages
 
-The script was written to call the toy service provided by the `ProtobufServer` `main` method.
-
-To run `ProtobufServer.java`, copy this [build.gradle](protobuf-tcp-rsa-provider/src/scripts/groovy/build.gradle) 
-file to some directory, then run the following command from the same directory:
-
-```
-gradle run
-```
-
-Now, from another shell, run the [test-client.groovy](protobuf-tcp-rsa-provider/src/scripts/groovy/test-client.groovy)
-script:
-
-```
-> groovy test-client.groovy
-Groovy Protobuffer TCP-RSA-Provider Client
-
-Enter "exit" to quit.
-
-Please enter the port number of your server: 5562
-
-Method to call remotely: sayHello joe
-
-Sending invocation: methodName: "sayHello"
-args {
-  type_url: "type.googleapis.com/google.protobuf.StringValue"
-  value: "\n\003joe"
-}
-
-successResult {
-  type_url: "type.googleapis.com/google.protobuf.StringValue"
-  value: "\n\tHello joe"
-}
-```
-
-## Creating a Java client service
-
-To create a local Java service which is backed by a remote service implementation, you can do something like this:
-
-```java
-static final int PORT = 5556;
-
-ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://127.0.0.1:" + PORT));
-
-// wrap handler into a Proxy
-Service proxyService = (Service) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
-        new Class[]{Service.class}, handler);
-```
+Check the [samples](samples) directory for examples in other languages.
 
 ## OSGi usage
 
@@ -188,6 +141,7 @@ Hence, using Declarative Services annotations, you would annotate your service w
         "service.exported.interfaces=*",
         "com.athaydes.protobuf.port=5561"
 })
+public class MyService implements SomeService {}
 ```
 
 ### Importing a remote OSGi service
