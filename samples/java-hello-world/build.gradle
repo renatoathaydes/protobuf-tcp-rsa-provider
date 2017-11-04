@@ -1,15 +1,8 @@
 apply plugin: 'java'
-apply plugin: 'application'
 
-mainClassName = 'HelloWorld'
+sourceCompatibility = 1.8
 
-sourceSets {
-    main {
-        java {
-            srcDirs = ['src/']
-        }
-    }
-}
+sourceSets.main.java.srcDirs('src/')
 
 dependencies {
     compile project(':protobuf-tcp-rsa-provider')
