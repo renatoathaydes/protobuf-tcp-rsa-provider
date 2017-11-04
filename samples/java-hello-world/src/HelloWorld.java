@@ -1,4 +1,4 @@
-import com.athaydes.osgi.rsa.provider.protobuf.api.RemoteService;
+import com.athaydes.osgi.rsa.provider.protobuf.api.RemoteServices;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -15,10 +15,10 @@ public class HelloWorld {
 
     public static void main(String[] args) throws IOException {
         // create server
-        Closeable server = RemoteService.provideService(new SimpleMyService(), 8022, MyService.class);
+        Closeable server = RemoteServices.provideService(new SimpleMyService(), 8022, MyService.class);
 
         // create client
-        MyService myService = RemoteService.createClient(MyService.class, "localhost", 8022);
+        MyService myService = RemoteServices.createClient(MyService.class, "localhost", 8022);
 
         Scanner in = new Scanner(System.in);
         while (true) {
