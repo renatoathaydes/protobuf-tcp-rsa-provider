@@ -1,0 +1,11 @@
+plugins {
+    id 'groovy'
+}
+
+dependencies {
+    compile project(':protobuf-tcp-rsa-provider')
+    compile 'org.codehaus.groovy:groovy-all:2.4.12'
+    compile 'org.spockframework:spock-core:1.1-groovy-2.4'
+    compile 'junit:junit:4.12'
+    runtime 'org.slf4j:slf4j-simple:1.7.25'
+}
