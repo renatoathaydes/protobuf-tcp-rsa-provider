@@ -1,6 +1,6 @@
 # ProtoBuffer TCP RSA Provider
 
-This project implements a tiny RPC protocol over a TCP connection using
+This project implements a tiny RPC protocol over TCP connections using
 [Protobuffer](https://developers.google.com/protocol-buffers/) as a serialization mechanism.
 
 It also contains a implementation of OSGi RSA (Remote Service Admin) 
@@ -9,7 +9,7 @@ via the [Apache Aries RSA](http://aries.apache.org/modules/rsa.html) implementat
 
 ## RPC Protocol
 
-The RPC protocol is as simple as possible and consists of the single 
+The RPC protocol is as simple as it can be and consists of the single 
 [rpc.proto](protobuf-tcp-rsa-provider/src/main/proto/rpc.proto) file:
 
 ```proto
@@ -40,62 +40,44 @@ message Result {
 }
 ```
 
-This protocol can represent any Java method invocation and can be used from any language
+This protocol can represent any method invocation and can be used from any language
 that supports Protobuffers.
 
 ## Java Server/Client example
 
-The following example shows how to send a method invocation from a Java client:
+The following example shows how to start a remote service server and client in Java:
 
 ```java
 // This code can be run with JGrab: https://github.com/renatoathaydes/jgrab
-// #jgrab com.athaydes.osgi:protobuf-tcp-rsa-provider:1.0-SNAPSHOT
-import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
-import com.athaydes.osgi.rsa.provider.protobuf.ProtobufServer;
-import com.google.protobuf.Any;
-import com.google.protobuf.StringValue;
+// #jgrab com.athaydes.osgi:protobuf-tcp-rsa-provider:0.1.0
+// #jgrab org.slf4j:slf4j-simple:1.7.25
+
+import com.athaydes.osgi.rsa.provider.protobuf.api.RemoteServices;
+
+import java.io.Closeable;
 import java.io.IOException;
-import java.net.Socket;
+import java.util.function.IntToDoubleFunction;
 
+public class HelloWorld {
 
-public class Example {
-    public static void main(String[] args) throws Exception {
-        // create and start a server first
-        ProtobufServer server = new ProtobufServer(5562, new HelloService());
-        Thread serverThread = new Thread(server);
-        serverThread.start();
-        Thread.sleep(500L); // let the server get up
-        
-        // here, the client code starts
-        try (Socket socket = new Socket("127.0.0.1", 5562)) {
-            System.out.println("Successfully connected to server, sending message");
-            
-            // send invocation
-            Api.MethodInvocation.newBuilder()
-                        .setMethodName("sayHello")
-                        .addArgs(Any.pack(StringValue.newBuilder().setValue("The Client!").build()))
-                        .build()
-                        .writeDelimitedTo(socket.getOutputStream());
-            
-            // receive response
-            System.out.println("Response:\n" + Api.Result.parseDelimitedFrom(socket.getInputStream()));
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static void main(String[] args) throws IOException {
+        // service implementation
+        IntToDoubleFunction squareCalculator = (n) -> Math.pow(n, 2);
+
+        // create server
+        Closeable server = RemoteServices.provideService(squareCalculator, 8023, IntToDoubleFunction.class);
+
+        // create client
+        IntToDoubleFunction client = RemoteServices.createClient(IntToDoubleFunction.class, "localhost", 8023);
+
+        try {
+            // invoke the remote service
+            double response = client.applyAsDouble(5);
+            System.out.println("The square of 5 is " + response);
         } finally {
-            serverThread.interrupt();
             server.close();
         }
     }
-    
-    // a simple service to run on the server
-    public static class HelloService {
-        public StringValue sayHello(StringValue message) {
-            return StringValue.newBuilder()
-                    .setValue("Hello " + message.getValue())
-                    .build();
-        }
-    }
-
 }
 ```
 
