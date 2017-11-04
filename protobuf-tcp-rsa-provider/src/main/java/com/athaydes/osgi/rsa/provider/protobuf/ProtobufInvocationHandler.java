@@ -106,7 +106,8 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
                 log.debug("Waiting for server response");
                 result = Api.Result.parseDelimitedFrom(socket.getInputStream());
                 if (result == null) {
-                    throw new CommunicationException(new IOException("Received EOF"));
+                    log.debug("Received EOF, resetting the socket");
+                    socketRef.set(null);
                 } else {
                     break;
                 }
