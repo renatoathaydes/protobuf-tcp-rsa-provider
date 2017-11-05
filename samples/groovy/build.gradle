@@ -6,5 +6,11 @@ sourceSets.main.groovy.srcDirs('src/')
 
 dependencies {
     compile 'org.codehaus.groovy:groovy-all:2.4.12'
-    compile 'com.athaydes.osgi:protobuf-tcp-rsa-provider:0.1.0'
+    compile project(':protobuf-tcp-rsa-provider')
+    runtime 'org.slf4j:slf4j-simple:1.7.25'
+}
+
+compileGroovy {
+    // turn off the Grapes processor to avoid Gradle compilation issues
+    groovyOptions.configurationScript = file("gradle-config.groovy")
 }
