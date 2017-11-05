@@ -3,6 +3,7 @@ plugins {
     id 'maven'
     id "com.google.protobuf" version "0.8.3"
     id "org.dm.bundle" version "0.10.0"
+    id "com.jfrog.bintray" version "1.6"
 }
 
 sourceCompatibility = 1.8
@@ -46,3 +47,91 @@ bundle {
                     'configs:List<String>="com.athaydes.protobuf"; version:Version=1.0'
     ]
 }
+
+tasks.withType(Javadoc) {
+    exclude('**/Api.java') // auto-generated Java code does not have proper javadocs
+}
+
+/* Publishing config */
+
+task javadocJar( type: Jar ) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+task sourcesJar( type: Jar ) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
+}
+
+// add all the info required by Maven Central to the pom
+configure( install.repositories.mavenInstaller ) {
+    pom.project {
+        inceptionYear '2017'
+        name project.name
+        packaging 'jar'
+        description project.description
+
+        url 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider'
+
+        scm {
+            connection 'git@github.com:renatoathaydes/protobuf-tcp-rsa-provider.git'
+            developerConnection 'git@github.com:renatoathaydes/protobuf-tcp-rsa-provider.git'
+            url 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider'
+        }
+
+        licenses {
+            license {
+                name 'The Apache License, Version 2.0'
+                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+            }
+        }
+
+        developers {
+            developer {
+                id 'renatoathaydes'
+                name 'Renato Athaydes'
+                email 'renato@athaydes.com'
+            }
+        }
+    }
+}
+
+def getProjectProperty = { String propertyName ->
+    project.properties[ propertyName ]
+}
+
+bintray {
+    user = getProjectProperty "bintrayUserName"
+    key = getProjectProperty "bintrayApiKey"
+    configurations = [ 'archives' ]
+    publish = true
+    pkg {
+        repo = 'maven'
+        name = 'protobuf-tcp-rsa-provider'
+        licenses = [ 'Apache-2.0' ]
+        labels = [ 'osgi', 'java', 'distributed', 'protobuffers', 'tcp' ]
+        publicDownloadNumbers = true
+
+        //noinspection GroovyAssignabilityCheck
+        version {
+            name = project.version
+            vcsTag = project.version
+            gpg {
+                sign = true
+            }
+            mavenCentralSync {
+                sync = true
+                user = getProjectProperty 'ossrhUsername'
+                password = getProjectProperty 'ossrhPassword'
+                close = '1' // '0' to NOT close
+            }
+        }
+    }
+}
+
+bintrayUpload.dependsOn build, sourcesJar
