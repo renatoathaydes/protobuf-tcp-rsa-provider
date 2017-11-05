@@ -113,6 +113,10 @@ bintray {
     pkg {
         repo = 'maven'
         name = 'protobuf-tcp-rsa-provider'
+        desc = project.description
+        vcsUrl = 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider.git'
+        websiteUrl = 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider'
+        issueTrackerUrl = 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider/issues'
         licenses = [ 'Apache-2.0' ]
         labels = [ 'osgi', 'java', 'distributed', 'protobuffers', 'tcp' ]
         publicDownloadNumbers = true
