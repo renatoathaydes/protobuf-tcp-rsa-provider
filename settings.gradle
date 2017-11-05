@@ -3,4 +3,5 @@ include 'protobuf-tcp-rsa-provider'
 include 'integration-tests'
 include 'samples/java'
 include 'samples/groovy'
+include 'samples/kotlin'
 
