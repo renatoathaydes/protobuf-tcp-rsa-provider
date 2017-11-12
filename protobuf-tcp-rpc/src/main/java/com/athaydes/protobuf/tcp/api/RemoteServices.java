@@ -22,6 +22,9 @@ public class RemoteServices {
      * <p>
      * To close the connection to the remote service, cast the returned value to a {@link Closeable} if it is not
      * already one, then call the {@link Closeable#close()} method.
+     * <p>
+     * <em>Note: the {@link Closeable#close()} method is only called remotely if {@code serviceType} is a subtype
+     * of {@link Closeable} and the remote service itself exports the {@link Closeable} interface.</em>
      *
      * @param serviceType the type of the service, normally an interface.
      * @param host        host name of the server
@@ -38,6 +41,9 @@ public class RemoteServices {
      * <p>
      * To close the connection to the remote service, cast the returned value to a {@link Closeable} if it is not
      * already one, then call the {@link Closeable#close()} method.
+     * <p>
+     * <em>Note: the {@link Closeable#close()} method is only called remotely if {@code serviceType} is a subtype
+     * of {@link Closeable} and the remote service itself exports the {@link Closeable} interface.</em>
      *
      * @param serviceType the type of the service, normally an interface.
      * @param host        host name of the server
@@ -48,8 +54,8 @@ public class RemoteServices {
      */
     @SuppressWarnings("unchecked")
     public static <T> T createClient(Class<T> serviceType, String host, int port, ClassLoader loader) {
-        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(URI.create("tcp://" + host + ":" + port));
-        return (T) Proxy.newProxyInstance(loader, new Class[]{serviceType}, handler);
+        return (T) createClient(URI.create("tcp://" + host + ":" + port),
+                new Class[]{serviceType}, loader);
     }
 
     /**
@@ -59,6 +65,9 @@ public class RemoteServices {
      * remote service indeed implements them.
      * <p>
      * To close the connection to the remote service, call the {@link Closeable#close()} method on the returned value.
+     * <p>
+     * <em>Note: the {@link Closeable#close()} method is only called remotely if {@code interfaces} include
+     * {@link Closeable} and the remote service itself exports the {@link Closeable} interface.</em>
      *
      * @param address     address of the remote service. The only protocol supported is TCP.
      * @param interfaces  the interfaces provided by the remote service.
@@ -70,8 +79,13 @@ public class RemoteServices {
             throw new IllegalArgumentException("Unsupported scheme (only TCP allowed): " + address.getScheme());
         }
 
-        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(address);
-        return (Closeable) Proxy.newProxyInstance(classLoader, appendIfNotPresent(interfaces, Closeable.class), handler);
+        Class[] allInterfaces = appendIfNotPresent(interfaces, Closeable.class);
+
+        // forward calls to close() iff client implements Closeable
+        boolean forwardCloseMethodCall = allInterfaces.length == interfaces.length;
+
+        ProtobufInvocationHandler handler = new ProtobufInvocationHandler(address, forwardCloseMethodCall);
+        return (Closeable) Proxy.newProxyInstance(classLoader, allInterfaces, handler);
     }
 
     /**

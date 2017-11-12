@@ -14,6 +14,7 @@ import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
 import com.google.protobuf.Message;
 import com.google.protobuf.StringValue;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationHandler;
@@ -69,15 +70,39 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
 
     private static final Logger log = LoggerFactory.getLogger(ProtobufInvocationHandler.class);
 
+    private static final Method closeMethod;
+
+    static {
+        try {
+            closeMethod = Closeable.class.getMethod("close");
+        } catch (NoSuchMethodException e) {
+            throw new ExceptionInInitializerError("Closeable interface does not have a close() method");
+        }
+    }
+
     private final URI address;
     private final AtomicReference<Socket> socketRef = new AtomicReference<>();
+    private final boolean forwardCloseMethodCall;
 
     public ProtobufInvocationHandler(URI address) {
+        this(address, false);
+    }
+
+    public ProtobufInvocationHandler(URI address, boolean forwardCloseMethodCall) {
         this.address = address;
+        this.forwardCloseMethodCall = forwardCloseMethodCall;
     }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws RuntimeException {
+        if (closeMethod.equals(method)) {
+            return handleCloseMethod();
+        } else {
+            return callRemoteMethod(method, args);
+        }
+    }
+
+    private Object callRemoteMethod(Method method, Object[] args) {
         log.debug("Calling remote method '{}'", method.getName());
         MethodInvocation invocation = MethodInvocation.newBuilder()
                 .setMethodName(method.getName())
@@ -141,6 +166,20 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             default:
                 return null;
         }
+    }
+
+    private Object handleCloseMethod() {
+        if (forwardCloseMethodCall) try {
+            callRemoteMethod(closeMethod, new Object[]{});
+        } catch (CommunicationException e) {
+            // swallow CommunicationException
+            log.debug("Ignoring CommunicationException when closing client: {}", e.toString());
+        }
+
+        log.debug("Closing client");
+        close();
+
+        return null;
     }
 
     private Socket createOrReuseSocket() throws IOException {
