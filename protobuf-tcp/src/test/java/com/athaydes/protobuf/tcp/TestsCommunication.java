@@ -37,9 +37,9 @@ public abstract class TestsCommunication {
 
     final ServerClientTest.Runner runnerService = new ServerClientTest.Runner();
 
-    final ProtobufServer exampleServer = new ProtobufServer(exampleService, EXAMPLE_SERVICE_PORT);
-    final ProtobufServer javaServer = new ProtobufServer(javaService, JAVA_SERVICE_PORT);
-    final ProtobufServer runnerServer = new ProtobufServer(runnerService, RUNNER_SERVICE_PORT);
+    final ProtobufServer<?> exampleServer = new ProtobufServer<>(exampleService, EXAMPLE_SERVICE_PORT);
+    final ProtobufServer<?> javaServer = new ProtobufServer<>(javaService, JAVA_SERVICE_PORT);
+    final ProtobufServer<?> runnerServer = new ProtobufServer<>(runnerService, RUNNER_SERVICE_PORT);
 
     @After
     public void cleanup() {

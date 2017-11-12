@@ -1,6 +1,7 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
-import com.athaydes.protobuf.tcp.ProtobufServer;
+import com.athaydes.protobuf.tcp.api.RemoteServices;
+import com.athaydes.protobuf.tcp.api.ServiceReference;
 import java.io.IOException;
 import java.util.Map;
 import org.apache.aries.rsa.spi.Endpoint;
@@ -18,7 +19,7 @@ import static com.athaydes.protobuf.tcp.Utils.getStringFrom;
 public class ProtobufEndpoint implements Endpoint {
 
     private final EndpointDescription description;
-    private final ProtobufServer server;
+    private final ServiceReference<?> server;
     private final Thread serverThread;
 
     ProtobufEndpoint(Object service,
@@ -37,7 +38,7 @@ public class ProtobufEndpoint implements Endpoint {
         String hostName = getStringFrom(effectiveProperties, DOMAIN + ".hostname")
                 .orElse("localhost");
 
-        this.server = new ProtobufServer(service, port, exportedInterfaces);
+        this.server = RemoteServices.createService(service, port, exportedInterfaces);
 
         String endpointId = String.format("tcp://%s:%s", hostName, port);
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);

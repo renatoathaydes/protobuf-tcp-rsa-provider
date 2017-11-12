@@ -1,11 +1,11 @@
 package com.athaydes.protobuf.tcp;
 
 import com.athaydes.protobuf.tcp.api.Api;
+import com.athaydes.protobuf.tcp.api.ServiceReference;
 import com.google.protobuf.Any;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.StringValue;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -33,20 +33,25 @@ import static java.util.Collections.emptyList;
 /**
  * A TCP implementation of a Protobuf RPC server that sends method invocations to a local service.
  */
-public class ProtobufServer implements Runnable, Closeable {
+public class ProtobufServer<T> implements ServiceReference<T> {
 
     private static final Logger log = LoggerFactory.getLogger(ProtobufServer.class);
 
     private final int port;
-    private final Object service;
+    private final T service;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicReference<AsynchronousServerSocketChannel> serverSocketRef = new AtomicReference<>();
     private final Map<String, List<Method>> methodsByName;
 
-    public ProtobufServer(Object service, int port, Class... exportedInterfaces) {
+    public ProtobufServer(T service, int port, Class... exportedInterfaces) {
         this.port = port;
         this.service = service;
         this.methodsByName = resolveMethods(service, exportedInterfaces);
+    }
+
+    @Override
+    public T getLocalService() {
+        return service;
     }
 
     /**
@@ -283,7 +288,7 @@ public class ProtobufServer implements Runnable, Closeable {
                 "  public StringValue sayHello(StringValue message)\n" +
                 "Send a message to port 5562 and this server will respond!\n");
 
-        ProtobufServer server = new ProtobufServer(new HelloService(), 5562);
+        ProtobufServer<?> server = new ProtobufServer<>(new HelloService(), 5562);
 
         server.run();
 

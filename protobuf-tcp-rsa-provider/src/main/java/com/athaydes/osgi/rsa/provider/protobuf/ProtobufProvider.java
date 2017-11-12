@@ -1,7 +1,7 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
-import com.athaydes.protobuf.tcp.ProtobufInvocationHandler;
-import java.lang.reflect.Proxy;
+import com.athaydes.protobuf.tcp.api.RemoteServices;
+import java.io.Closeable;
 import java.net.URI;
 import java.util.Deque;
 import java.util.Map;
@@ -54,13 +54,13 @@ public class ProtobufProvider implements DistributionProvider {
             throws IntentUnsatisfiedException {
         try {
             URI address = new URI(endpoint.getId());
-            ProtobufInvocationHandler handler = new ProtobufInvocationHandler(address);
+            Closeable client = RemoteServices.createClient(address, interfaces, cl);
             if (log.isInfoEnabled()) {
                 log.info("Imported Endpoint with interfaces {}, description: {}",
                         endpoint.getInterfaces(), endpoint);
             }
-            closeables.add(handler);
-            return Proxy.newProxyInstance(cl, interfaces, handler);
+            closeables.add(client);
+            return client;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
