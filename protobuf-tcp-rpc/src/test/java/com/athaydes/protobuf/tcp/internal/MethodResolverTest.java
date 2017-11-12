@@ -12,13 +12,14 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class MethodResolverTest {
 
     @Test
     public void resolvesInterfaceMethodsService1() throws Exception {
         Map<String, List<Method>> methods = MethodResolver
-                .resolveMethods(null, new Class[]{Service1.class});
+                .resolveMethods(new Service1Impl(), new Class[]{Service1.class});
 
         assertThat(methods.size(), equalTo(1));
         assertThat(methods.keySet(), equalTo(singleton("hello")));
@@ -34,7 +35,7 @@ public class MethodResolverTest {
     @Test
     public void resolvesInterfaceMethodsService2() throws Exception {
         Map<String, List<Method>> methods = MethodResolver
-                .resolveMethods(null, new Class[]{Service2.class});
+                .resolveMethods(new SuperService(), new Class[]{Service2.class});
 
         assertThat(methods.size(), equalTo(2));
         assertThat(methods.keySet(), equalTo(new HashSet<>(Arrays.asList("bye", "isCool"))));
@@ -133,6 +134,40 @@ public class MethodResolverTest {
         assertThat(veryCoolMethods.get(0).getReturnType(), equalTo(float.class));
     }
 
+    @Test
+    public void cannotExportServiceNotImplemented() {
+        try {
+            MethodResolver.resolveMethods(new Service1Impl(),
+                    new Class[]{Service2.class});
+            fail("Should throw a ClassCastException as Service1Impl does not implement Service2");
+        } catch (ClassCastException e) {
+            assertThat(e.getMessage(), equalTo("Cannot cast " + Service1Impl.class +
+                    " to " + Service2.class));
+        }
+    }
+
+    @Test
+    public void canExportServiceImplementedBySupertype() {
+        // this is legal, should not cause an Exception
+        MethodResolver.resolveMethods(new Service5ImplExtendsService1Impl(),
+                new Class[]{Service1.class});
+
+        // this is legal, should not cause an Exception
+        MethodResolver.resolveMethods(new Service5ImplExtendsService1Impl(),
+                new Class[]{Service5.class, Service1.class});
+    }
+
+    @Test
+    public void canExportServiceImplementedByExtensionOfInterface() {
+        // this is legal, should not cause an Exception
+        MethodResolver.resolveMethods(new Service3Impl(),
+                new Class[]{Service3.class});
+
+        // this is legal, should not cause an Exception
+        MethodResolver.resolveMethods(new Service3Impl(),
+                new Class[]{Service1.class, Service3.class});
+    }
+
     interface Service1 {
         void hello();
     }
@@ -176,6 +211,31 @@ public class MethodResolverTest {
 
         protected boolean isHidden() {
             return true;
+        }
+    }
+
+    public static class Service1Impl implements Service1 {
+        @Override
+        public void hello() {
+        }
+    }
+
+    public static class Service3Impl implements Service3 {
+        @Override
+        public void hello() {
+        }
+
+        @Override
+        public int cool() {
+            return 44;
+        }
+    }
+
+    public static class Service5ImplExtendsService1Impl
+            extends Service1Impl implements Service5 {
+        @Override
+        public float veryCool() {
+            return 0.5f;
         }
     }
 

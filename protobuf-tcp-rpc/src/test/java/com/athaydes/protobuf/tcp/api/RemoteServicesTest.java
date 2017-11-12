@@ -146,4 +146,11 @@ public class RemoteServicesTest {
         }
     }
 
+    @Test(expected = ClassCastException.class)
+    public void cannotCreateServerImplementingWrongInterface() {
+        // try to create server implementing Runnable when the actual service does not implement it
+        serviceToClose = RemoteServices.provideService(new ImplementsTwoServices(), 8000,
+                SimpleService.class, Runnable.class);
+    }
+
 }
