@@ -1,5 +1,5 @@
 rootProject.name = 'protobuf-tcp-rsa-provider'
-include 'protobuf-tcp'
+include 'protobuf-tcp-rpc'
 include 'protobuf-tcp-rsa-provider'
 include 'integration-tests'
 include 'samples/java'

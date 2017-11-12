@@ -11,7 +11,7 @@ sourceCompatibility = 1.8
 description = 'Protobuffer/TCP implementation of Aries RSA DistributionProvider'
 
 dependencies {
-    compile project(':protobuf-tcp')
+    compile project(':protobuf-tcp-rpc')
     compile 'org.slf4j:slf4j-api:1.7.25'
     compile 'org.apache.aries.rsa:org.apache.aries.rsa.spi:1.11.0'
     compileOnly 'org.osgi:org.osgi.core:4.3.1'

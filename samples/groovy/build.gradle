@@ -6,7 +6,7 @@ sourceSets.main.groovy.srcDirs('src/')
 
 dependencies {
     compile 'org.codehaus.groovy:groovy-all:2.4.12'
-    compile project(':protobuf-tcp-rsa-provider')
+    compile project(':protobuf-tcp-rpc')
     runtime 'org.slf4j:slf4j-simple:1.7.25'
 }
 

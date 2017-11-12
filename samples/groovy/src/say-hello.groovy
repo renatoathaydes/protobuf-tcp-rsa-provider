@@ -3,7 +3,7 @@
  */
 
 @Grab('org.slf4j:slf4j-simple:1.7.25')
-@Grab('com.athaydes.osgi:protobuf-tcp-rsa-provider:0.1.0')
+@Grab('com.athaydes.osgi:protobuf-tcp-rpc:0.2.0')
 import com.athaydes.protobuf.tcp.api.RemoteServices
 
 interface HelloService {

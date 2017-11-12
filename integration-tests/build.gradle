@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    compile project(':protobuf-tcp')
+    compile project(':protobuf-tcp-rpc')
     compile 'org.codehaus.groovy:groovy-all:2.4.12'
     compile 'org.spockframework:spock-core:1.1-groovy-2.4'
     compile 'junit:junit:4.12'
