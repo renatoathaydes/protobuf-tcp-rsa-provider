@@ -1,6 +1,6 @@
 package com.athaydes.protobuf.tcp.api;
 
-import com.athaydes.protobuf.tcp.Utils;
+import com.athaydes.protobuf.tcp.internal.Utils;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;

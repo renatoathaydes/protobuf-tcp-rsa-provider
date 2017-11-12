@@ -1,7 +1,7 @@
 package com.athaydes.protobuf.tcp.api;
 
-import com.athaydes.protobuf.tcp.ProtobufInvocationHandler;
-import com.athaydes.protobuf.tcp.ProtobufServer;
+import com.athaydes.protobuf.tcp.internal.ProtobufInvocationHandler;
+import com.athaydes.protobuf.tcp.internal.ProtobufServer;
 import java.io.Closeable;
 import java.lang.reflect.Proxy;
 import java.net.URI;

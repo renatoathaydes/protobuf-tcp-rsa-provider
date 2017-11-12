@@ -1,4 +1,4 @@
-package com.athaydes.protobuf.tcp;
+package com.athaydes.protobuf.tcp.internal;
 
 import com.athaydes.protobuf.tcp.api.Api;
 import com.athaydes.protobuf.tcp.api.ServiceReference;
@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.athaydes.protobuf.tcp.MethodResolver.resolveMethods;
-import static com.athaydes.protobuf.tcp.Utils.closeQuietly;
+import static com.athaydes.protobuf.tcp.internal.MethodResolver.resolveMethods;
+import static com.athaydes.protobuf.tcp.internal.Utils.closeQuietly;
 import static java.util.Collections.emptyList;
 
 /**

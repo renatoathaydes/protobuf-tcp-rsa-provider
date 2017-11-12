@@ -1,4 +1,4 @@
-package com.athaydes.protobuf.tcp;
+package com.athaydes.protobuf.tcp.internal;
 
 import com.google.protobuf.StringValue;
 import java.lang.reflect.Proxy;

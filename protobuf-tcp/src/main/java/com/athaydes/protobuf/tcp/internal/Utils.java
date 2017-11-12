@@ -1,4 +1,4 @@
-package com.athaydes.protobuf.tcp;
+package com.athaydes.protobuf.tcp.internal;
 
 import com.athaydes.protobuf.tcp.api.ServicePropertyReader;
 import java.io.Closeable;

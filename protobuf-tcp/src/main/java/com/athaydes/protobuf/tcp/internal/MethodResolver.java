@@ -1,4 +1,4 @@
-package com.athaydes.protobuf.tcp;
+package com.athaydes.protobuf.tcp.internal;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
