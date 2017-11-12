@@ -1,6 +1,7 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
 import com.athaydes.protobuf.tcp.api.RemoteServices;
+import com.athaydes.protobuf.tcp.api.ServicePropertyReader;
 import com.athaydes.protobuf.tcp.api.ServiceReference;
 import java.io.IOException;
 import java.util.Map;
@@ -9,8 +10,6 @@ import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 
 import static com.athaydes.osgi.rsa.provider.protobuf.ProtobufProvider.DOMAIN;
-import static com.athaydes.protobuf.tcp.Utils.getIntFrom;
-import static com.athaydes.protobuf.tcp.Utils.getStringFrom;
 
 /**
  * <a href="http://aries.apache.org/modules/rsa.html">Apache Aries RSA</a> {@link Endpoint}
@@ -32,10 +31,12 @@ public class ProtobufEndpoint implements Endpoint {
             throw new IllegalArgumentException("Cannot export service without any interfaces");
         }
 
-        int port = getIntFrom(effectiveProperties, DOMAIN + ".port")
+        ServicePropertyReader reader = ServicePropertyReader.getDefault();
+
+        int port = reader.getIntFrom(effectiveProperties, DOMAIN + ".port")
                 .orElse(5556);
 
-        String hostName = getStringFrom(effectiveProperties, DOMAIN + ".hostname")
+        String hostName = reader.getStringFrom(effectiveProperties, DOMAIN + ".hostname")
                 .orElse("localhost");
 
         this.server = RemoteServices.createService(service, port, exportedInterfaces);

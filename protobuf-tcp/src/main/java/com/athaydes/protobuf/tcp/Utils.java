@@ -1,5 +1,6 @@
 package com.athaydes.protobuf.tcp;
 
+import com.athaydes.protobuf.tcp.api.ServicePropertyReader;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
@@ -9,17 +10,15 @@ import java.util.OptionalInt;
 /**
  * A few stateless, helper functions.
  */
-public final class Utils {
+public final class Utils implements ServicePropertyReader {
 
-    private Utils() {
-        // not instantiable
-    }
-
-    public static Optional<String> getStringFrom(Map<String, Object> map, String key) {
+    @Override
+    public Optional<String> getStringFrom(Map<String, Object> map, String key) {
         return Optional.ofNullable(map.get(key)).map(Object::toString);
     }
 
-    public static OptionalInt getIntFrom(Map<String, Object> map, String key)
+    @Override
+    public OptionalInt getIntFrom(Map<String, Object> map, String key)
             throws NumberFormatException {
         Optional<Integer> optInt = Optional.ofNullable(map.get(key))
                 .map(Object::toString)
