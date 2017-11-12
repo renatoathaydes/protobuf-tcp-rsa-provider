@@ -1,13 +1,12 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
+package com.athaydes.protobuf.tcp;
 
-import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
+import com.athaydes.protobuf.tcp.api.Api;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.junit.Test;
-
 import java.net.Socket;
 import java.nio.channels.InterruptedByTimeoutException;
+import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;

@@ -1,15 +1,15 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
+import com.athaydes.protobuf.tcp.ProtobufServer;
+import java.io.IOException;
+import java.util.Map;
 import org.apache.aries.rsa.spi.Endpoint;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 
-import java.io.IOException;
-import java.util.Map;
-
 import static com.athaydes.osgi.rsa.provider.protobuf.ProtobufProvider.DOMAIN;
-import static com.athaydes.osgi.rsa.provider.protobuf.Utils.getIntFrom;
-import static com.athaydes.osgi.rsa.provider.protobuf.Utils.getStringFrom;
+import static com.athaydes.protobuf.tcp.Utils.getIntFrom;
+import static com.athaydes.protobuf.tcp.Utils.getStringFrom;
 
 /**
  * <a href="http://aries.apache.org/modules/rsa.html">Apache Aries RSA</a> {@link Endpoint}

@@ -1,12 +1,11 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
+package com.athaydes.protobuf.tcp;
 
 import com.google.protobuf.StringValue;
-import org.junit.Test;
-
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.stream.LongStream;
+import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;

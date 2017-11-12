@@ -1,4 +1,4 @@
-import com.athaydes.osgi.rsa.provider.protobuf.api.RemoteServices
+import com.athaydes.protobuf.tcp.api.RemoteServices
 import java.util.function.IntToDoubleFunction
 
 /**

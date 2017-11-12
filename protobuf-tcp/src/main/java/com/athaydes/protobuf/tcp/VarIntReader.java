@@ -1,7 +1,6 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
+package com.athaydes.protobuf.tcp;
 
 import com.google.protobuf.CodedInputStream;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.OptionalInt;

@@ -1,4 +1,4 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
+package com.athaydes.protobuf.tcp;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
@@ -7,12 +7,11 @@ import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.StringValue;
-import org.junit.Test;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.LongStream;
+import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;

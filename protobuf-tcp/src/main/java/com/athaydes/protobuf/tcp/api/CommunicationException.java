@@ -1,4 +1,4 @@
-package com.athaydes.osgi.rsa.provider.protobuf.api;
+package com.athaydes.protobuf.tcp.api;
 
 import java.io.IOException;
 

@@ -15,11 +15,11 @@ The RPC protocol is as simple as it can be and consists of the single
 ```proto
 syntax = "proto3";
 
-package com.athaydes.osgi.rsa.provider.protobuf.api;
+package com.athaydes.protobuf.tcp.api;
 
 import "google/protobuf/any.proto";
 
-option java_package = "com.athaydes.osgi.rsa.provider.protobuf.api";
+option java_package = "com.athaydes.protobuf.tcp.api";
 option java_outer_classname = "Api";
 
 message MethodInvocation {
@@ -52,7 +52,7 @@ The following example shows how to start a remote service server and client in J
 // #jgrab com.athaydes.osgi:protobuf-tcp-rsa-provider:0.1.0
 // #jgrab org.slf4j:slf4j-simple:1.7.25
 
-import com.athaydes.osgi.rsa.provider.protobuf.api.RemoteServices;
+import com.athaydes.protobuf.tcp.api.RemoteServices;
 
 import java.io.Closeable;
 import java.io.IOException;

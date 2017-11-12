@@ -1,9 +1,9 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
+package com.athaydes.protobuf.tcp;
 
-import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
-import com.athaydes.osgi.rsa.provider.protobuf.api.Api.MethodInvocation;
-import com.athaydes.osgi.rsa.provider.protobuf.api.CommunicationException;
-import com.athaydes.osgi.rsa.provider.protobuf.api.RemoteException;
+import com.athaydes.protobuf.tcp.api.Api;
+import com.athaydes.protobuf.tcp.api.Api.MethodInvocation;
+import com.athaydes.protobuf.tcp.api.CommunicationException;
+import com.athaydes.protobuf.tcp.api.RemoteException;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.ByteString;
@@ -14,9 +14,6 @@ import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
 import com.google.protobuf.Message;
 import com.google.protobuf.StringValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationHandler;
@@ -30,6 +27,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.util.stream.Collectors.toList;
 

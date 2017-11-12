@@ -1,10 +1,8 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
+package com.athaydes.protobuf.tcp;
 
-import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
+import com.athaydes.protobuf.tcp.api.Api;
 import com.google.protobuf.Any;
 import com.google.protobuf.StringValue;
-import org.junit.After;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.Socket;
@@ -13,6 +11,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.After;
 
 /**
  * Base class for tests that check socket communication.

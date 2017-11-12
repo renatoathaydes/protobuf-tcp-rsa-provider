@@ -1,12 +1,11 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
-
-import org.junit.Test;
+package com.athaydes.protobuf.tcp;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import org.junit.Test;
 
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toList;

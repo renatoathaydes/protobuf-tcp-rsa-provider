@@ -3,8 +3,7 @@ plugins {
 }
 
 allprojects {
-    group 'com.athaydes.osgi'
-    version '0.1.0'
+    group 'com.athaydes.protobuf'
     repositories {
         jcenter()
     }

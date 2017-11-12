@@ -1,12 +1,9 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
+package com.athaydes.protobuf.tcp;
 
-import com.athaydes.osgi.rsa.provider.protobuf.api.Api;
+import com.athaydes.protobuf.tcp.api.Api;
 import com.google.protobuf.Any;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.StringValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
@@ -26,9 +23,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static com.athaydes.osgi.rsa.provider.protobuf.MethodResolver.resolveMethods;
-import static com.athaydes.osgi.rsa.provider.protobuf.Utils.closeQuietly;
+import static com.athaydes.protobuf.tcp.MethodResolver.resolveMethods;
+import static com.athaydes.protobuf.tcp.Utils.closeQuietly;
 import static java.util.Collections.emptyList;
 
 /**

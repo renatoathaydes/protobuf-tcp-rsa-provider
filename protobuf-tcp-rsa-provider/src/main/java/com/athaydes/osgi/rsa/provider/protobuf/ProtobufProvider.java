@@ -1,5 +1,11 @@
 package com.athaydes.osgi.rsa.provider.protobuf;
 
+import com.athaydes.protobuf.tcp.ProtobufInvocationHandler;
+import java.lang.reflect.Proxy;
+import java.net.URI;
+import java.util.Deque;
+import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import org.apache.aries.rsa.spi.DistributionProvider;
 import org.apache.aries.rsa.spi.Endpoint;
 import org.apache.aries.rsa.spi.IntentUnsatisfiedException;
@@ -8,12 +14,6 @@ import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Proxy;
-import java.net.URI;
-import java.util.Deque;
-import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * <a href="http://aries.apache.org/modules/rsa.html">Apache Aries RSA</a> {@link DistributionProvider}

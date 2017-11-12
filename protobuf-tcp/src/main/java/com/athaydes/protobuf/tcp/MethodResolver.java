@@ -1,4 +1,4 @@
-package com.athaydes.osgi.rsa.provider.protobuf;
+package com.athaydes.protobuf.tcp;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;

@@ -1,4 +1,4 @@
-package com.athaydes.osgi.rsa.provider.protobuf.api;
+package com.athaydes.protobuf.tcp.api;
 
 /**
  * Exception resulting from a remote service throwing an {@link Exception} of any type.

@@ -1,8 +1,7 @@
-package com.athaydes.osgi.rsa.provider.protobuf.api;
+package com.athaydes.protobuf.tcp.api;
 
-import com.athaydes.osgi.rsa.provider.protobuf.ProtobufInvocationHandler;
-import com.athaydes.osgi.rsa.provider.protobuf.ProtobufServer;
-
+import com.athaydes.protobuf.tcp.ProtobufInvocationHandler;
+import com.athaydes.protobuf.tcp.ProtobufServer;
 import java.io.Closeable;
 import java.lang.reflect.Proxy;
 import java.net.URI;

@@ -2,8 +2,7 @@
 // #jgrab com.athaydes.osgi:protobuf-tcp-rsa-provider:0.1.0
 // #jgrab org.slf4j:slf4j-simple:1.7.25
 
-import com.athaydes.osgi.rsa.provider.protobuf.api.RemoteServices;
-
+import com.athaydes.protobuf.tcp.api.RemoteServices;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Scanner;
