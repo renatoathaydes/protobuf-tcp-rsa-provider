@@ -7,7 +7,11 @@ import java.util.Arrays;
 import java.util.stream.LongStream;
 import org.junit.Test;
 
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
 public class ServerClientTest extends TestsCommunication {
@@ -129,6 +133,35 @@ public class ServerClientTest extends TestsCommunication {
 
             // ensure the method was really called
             assertThat(runnerService.methodCount.get(), equalTo(3));
+        }
+    }
+
+    @Test
+    public void proxyClientNeverForwardsObjectMethods() throws Throwable {
+        // start the server
+        serverThread.submit(javaServer);
+
+        // server should be running now
+        waitForSocketToBind(JAVA_SERVICE_PORT);
+
+        try (ProtobufInvocationHandler handler = new ProtobufInvocationHandler(
+                URI.create("tcp://127.0.0.1:" + JAVA_SERVICE_PORT))) {
+            // wrap handler into a Proxy
+            JavaService proxyService = (JavaService) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+                    new Class[]{JavaService.class}, handler);
+
+            // call Object methods using the proxy
+            String toString = proxyService.toString();
+            int hash = proxyService.hashCode();
+            @SuppressWarnings("EqualsWithItself")
+            boolean isEqual = proxyService.equals(proxyService);
+            Class<?> type = proxyService.getClass();
+
+            // ensure the results are as expected
+            assertThat(toString, allOf(containsString("Proxy"), containsString("RemoteService")));
+            assertThat(hash, not(0));
+            assertThat(isEqual, is(true));
+            assertThat(type.getName(), containsString("Proxy"));
         }
     }
 

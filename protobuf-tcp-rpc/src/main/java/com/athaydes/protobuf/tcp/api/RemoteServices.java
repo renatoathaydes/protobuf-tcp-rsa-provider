@@ -120,6 +120,7 @@ public class RemoteServices {
      * @param port       port to use for remote connections
      * @param interfaces the interfaces that can be provided by the service. If none is provided,
      *                   all methods of the service will be exposed remotely.
+     * @param <T>        type of the service
      * @return reference to the server wrapper around the local service that can be used to start and close it later
      * @see #provideService(Object, int, Class[])
      */

@@ -97,8 +97,26 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
     public Object invoke(Object proxy, Method method, Object[] args) throws RuntimeException {
         if (closeMethod.equals(method)) {
             return handleCloseMethod();
+        } else if (method.getDeclaringClass().equals(Object.class)) {
+            return invokeLocalObjectMethod(proxy, method, args);
         } else {
             return callRemoteMethod(method, args);
+        }
+    }
+
+    private Object invokeLocalObjectMethod(Object proxy, Method method, Object[] args) {
+        log.info("Invoking local method {}", method);
+
+        // implement only the Object methods that are overridable
+        switch (method.getName()) {
+            case "toString":
+                return "RemoteService{address=" + address + ",class=" + proxy.getClass().getName() + "}";
+            case "equals":
+                return args[0] == proxy;
+            case "hashCode":
+                return proxy.getClass().hashCode() + address.hashCode();
+            default:
+                throw new RuntimeException(new NoSuchMethodException(method.getName()));
         }
     }
 
