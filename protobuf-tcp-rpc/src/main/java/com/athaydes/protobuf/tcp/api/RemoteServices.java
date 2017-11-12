@@ -6,6 +6,8 @@ import java.io.Closeable;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 
+import static com.athaydes.protobuf.tcp.internal.Utils.appendIfNotPresent;
+
 /**
  * Simple interface to create both server and client remote services.
  */
@@ -69,7 +71,7 @@ public class RemoteServices {
         }
 
         ProtobufInvocationHandler handler = new ProtobufInvocationHandler(address);
-        return (Closeable) Proxy.newProxyInstance(classLoader, interfaces, handler);
+        return (Closeable) Proxy.newProxyInstance(classLoader, appendIfNotPresent(interfaces, Closeable.class), handler);
     }
 
     /**

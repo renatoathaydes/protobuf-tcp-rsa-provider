@@ -33,4 +33,16 @@ public final class Utils implements ServicePropertyReader {
             // ignore
         }
     }
+
+    public static Class[] appendIfNotPresent(Class[] classes, Class type) {
+        for (Class item : classes) {
+            if (item.equals(type)) {
+                return classes;
+            }
+        }
+        Class[] result = new Class[classes.length + 1];
+        System.arraycopy(classes, 0, result, 0, classes.length);
+        result[classes.length] = type;
+        return result;
+    }
 }
