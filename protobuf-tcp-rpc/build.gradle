@@ -6,13 +6,13 @@ plugins {
     id "com.jfrog.bintray" version "1.6"
 }
 
-version = '0.2.0'
+version = '0.2.1'
 
 sourceCompatibility = 1.8
 description = 'Protobuffer/TCP RPC protocol'
 
 dependencies {
-    compile 'com.google.protobuf:protobuf-java:3.4.0'
+    compile 'com.google.protobuf:protobuf-java:3.5.1'
     compile 'org.slf4j:slf4j-api:1.7.25'
     testCompile 'junit:junit:4.12'
     testCompile 'org.slf4j:slf4j-simple:1.7.25'
@@ -35,11 +35,12 @@ protobuf {
 bundle {
     failOnError = true
     instructions << [
-            'Export-Package'    : 'com.athaydes.protobuf.tcp.api',
-            'Bundle-Vendor'     : 'Renato Athaydes',
-            'Bundle-Name'       : 'Protobuffer TCP RPC',
-            'Bundle-Description': description,
-            'Bundle-DocURL'     : 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider'
+            'Automatic-Module-Name': 'com.athaydes.protobuf_tcp_rpc',
+            'Export-Package'       : 'com.athaydes.protobuf.tcp.api',
+            'Bundle-Vendor'        : 'Renato Athaydes',
+            'Bundle-Name'          : 'Protobuffer TCP RPC',
+            'Bundle-Description'   : description,
+            'Bundle-DocURL'        : 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider'
     ]
 }
 
