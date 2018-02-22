@@ -23,14 +23,15 @@ dependencies {
 bundle {
     failOnError = true
     instructions << [
-            'Export-Package'    : '',
-            'Import-Package'    : 'org.osgi.service.remoteserviceadmin;version=1.0.0,*',
-            'Bundle-Vendor'     : 'Renato Athaydes',
-            'Bundle-Name'       : 'Protobuffer TCP RSA Provider',
-            'Bundle-Description': description,
-            'Bundle-DocURL'     : 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider',
-            'Bundle-Activator'  : 'com.athaydes.osgi.rsa.provider.protobuf.Activator',
-            'Provide-Capability': 'osgi.remoteserviceadmin.distribution;' +
+            'Automatic-Module-Name': 'com.athaydes.protobuf_tcp_rpc',
+            'Export-Package'       : '',
+            'Import-Package'       : 'org.osgi.service.remoteserviceadmin;version=1.0.0,*',
+            'Bundle-Vendor'        : 'Renato Athaydes',
+            'Bundle-Name'          : 'Protobuffer TCP RSA Provider',
+            'Bundle-Description'   : description,
+            'Bundle-DocURL'        : 'https://github.com/renatoathaydes/protobuf-tcp-rsa-provider',
+            'Bundle-Activator'     : 'com.athaydes.osgi.rsa.provider.protobuf.Activator',
+            'Provide-Capability'   : 'osgi.remoteserviceadmin.distribution;' +
                     'configs:List<String>="com.athaydes.protobuf"; version:Version=1.0'
     ]
 }
