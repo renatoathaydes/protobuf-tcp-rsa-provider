@@ -9,8 +9,10 @@ import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ListValue;
 import com.google.protobuf.Message;
 import com.google.protobuf.StringValue;
+import com.google.protobuf.Value;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -106,6 +108,18 @@ final class MethodInvocationResolver {
 
         typeConverters_.put(Double.class, any -> {
             Double result = any.is(DoubleValue.class) ? any.unpack(DoubleValue.class).getValue() : null;
+            return result;
+        });
+
+        typeConverters_.put(int[].class, any -> {
+            List<Value> listValue = any.is(ListValue.class) ? any.unpack(ListValue.class).getValuesList() : null;
+            if (listValue == null) {
+                return null;
+            }
+            int[] result = new int[listValue.size()];
+            for (int i = 0; i < result.length; i++) {
+                result[i] = Double.valueOf(listValue.get(i).getNumberValue()).intValue();
+            }
             return result;
         });
 

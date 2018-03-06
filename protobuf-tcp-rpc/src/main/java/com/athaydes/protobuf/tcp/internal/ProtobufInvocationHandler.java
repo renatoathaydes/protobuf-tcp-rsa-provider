@@ -12,8 +12,10 @@ import com.google.protobuf.DoubleValue;
 import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
+import com.google.protobuf.ListValue;
 import com.google.protobuf.Message;
 import com.google.protobuf.StringValue;
+import com.google.protobuf.Value;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,6 +46,15 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
     private static final Map<Class<?>, Function<Object, Any>> packFunctions;
 
     static {
+        Function<Object, Any> intArrayToPackedValue = object ->
+        {
+            ListValue.Builder value = ListValue.newBuilder();
+            for (int i : (int[]) object) {
+                value.addValues(Value.newBuilder().setNumberValue(i));
+            }
+            return Any.pack(value.build());
+        };
+
         Map<Class<?>, Function<Object, Any>> packFunctions_ = new HashMap<>(9);
 
         packFunctions_.put(String.class, object ->
@@ -64,6 +75,7 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
                 Any.pack(DoubleValue.newBuilder().setValue((double) object).build()));
         packFunctions_.put(Byte.class, object ->
                 Any.pack(BytesValue.newBuilder().setValue(ByteString.copyFrom(new byte[]{(byte) object})).build()));
+        packFunctions_.put(int[].class, intArrayToPackedValue);
 
         packFunctions = Collections.unmodifiableMap(packFunctions_);
     }

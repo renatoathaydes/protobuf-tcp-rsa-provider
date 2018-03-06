@@ -11,9 +11,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.LongStream;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 public class ProtbufInvocationResolverTest {
@@ -34,9 +38,11 @@ public class ProtbufInvocationResolverTest {
         double javaDouble = 0.4;
         float javaFloat = 4.3f;
         byte javaByte = 0b01100110;
+        int[] javaIntArray = {5, 4, 3, 2, 1};
 
         List<Object> values = Arrays.asList(stringValue, int32Value, int64Value, bytesValue, javaString,
-                javaInt, javaChar, javaBool, javaShort, javaLong, javaDouble, javaFloat, javaByte);
+                javaInt, javaChar, javaBool, javaShort, javaLong, javaDouble, javaFloat, javaByte,
+                javaIntArray);
 
         final int repetitions = 10;
 
@@ -80,7 +86,11 @@ public class ProtbufInvocationResolverTest {
                 unpackingTimes[index++] = System.nanoTime() - startTime;
 
                 // verify value
-                assertEquals(expectedValue, unpacked);
+                if (expectedValue.getClass().isArray()) {
+                    assertArrayUnpackedCorrectly(expectedValue, unpacked);
+                } else {
+                    assertEquals(expectedValue, unpacked);
+                }
             }
         }
 
@@ -89,6 +99,18 @@ public class ProtbufInvocationResolverTest {
         System.out.println("Average without 5 max outliers (ns): " + avg(packingTimes));
         System.out.println("tryConvert() performance (ns): " + Arrays.toString(unpackingTimes));
         System.out.println("Average without 5 max outliers (ns): " + avg(unpackingTimes));
+    }
+
+    private static void assertArrayUnpackedCorrectly(Object expected, Object actual) {
+        assertNotNull("Actual array value is null", actual);
+        if (expected instanceof int[]) {
+            assertThat(actual, CoreMatchers.instanceOf(int[].class));
+
+            //noinspection RedundantCast
+            assertArrayEquals((int[]) expected, (int[]) actual);
+        } else {
+            throw new RuntimeException("Don't know how to verify " + expected);
+        }
     }
 
     @SuppressWarnings("ConstantConditions")
