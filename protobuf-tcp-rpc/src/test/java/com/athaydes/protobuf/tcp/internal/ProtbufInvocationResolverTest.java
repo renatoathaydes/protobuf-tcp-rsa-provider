@@ -5,15 +5,14 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.BytesValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.StringValue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.LongStream;
-import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -23,7 +22,7 @@ import static org.junit.Assert.fail;
 public class ProtbufInvocationResolverTest {
 
     @Test
-    public void canConvertObjectToMessage() throws InvalidProtocolBufferException {
+    public void canConvertObjectToMessageAndBack() {
         StringValue stringValue = StringValue.newBuilder().setValue("hi").build();
         Int32Value int32Value = Int32Value.newBuilder().setValue(42).build();
         Int64Value int64Value = Int64Value.newBuilder().setValue(10L).build();
@@ -38,11 +37,9 @@ public class ProtbufInvocationResolverTest {
         double javaDouble = 0.4;
         float javaFloat = 4.3f;
         byte javaByte = 0b01100110;
-        int[] javaIntArray = {5, 4, 3, 2, 1};
 
         List<Object> values = Arrays.asList(stringValue, int32Value, int64Value, bytesValue, javaString,
-                javaInt, javaChar, javaBool, javaShort, javaLong, javaDouble, javaFloat, javaByte,
-                javaIntArray);
+                javaInt, javaChar, javaBool, javaShort, javaLong, javaDouble, javaFloat, javaByte);
 
         final int repetitions = 10;
 
@@ -86,11 +83,7 @@ public class ProtbufInvocationResolverTest {
                 unpackingTimes[index++] = System.nanoTime() - startTime;
 
                 // verify value
-                if (expectedValue.getClass().isArray()) {
-                    assertArrayUnpackedCorrectly(expectedValue, unpacked);
-                } else {
-                    assertEquals(expectedValue, unpacked);
-                }
+                assertEquals(expectedValue, unpacked);
             }
         }
 
@@ -101,13 +94,26 @@ public class ProtbufInvocationResolverTest {
         System.out.println("Average without 5 max outliers (ns): " + avg(unpackingTimes));
     }
 
+    @Test
+    public void canConvertArraysToMessageAndBack() {
+        int[] javaIntArray = {5, 4, 3, 2, 1};
+        double[] javaDoubleArray = {5.2, 1.3};
+
+        for (Object javaValue : Arrays.asList(javaIntArray, javaDoubleArray)) {
+            Any message = ProtobufInvocationHandler.packedMessage(javaValue);
+            Object unpacked = MethodInvocationResolver.tryConvert(message, javaValue.getClass());
+            assertArrayUnpackedCorrectly(javaValue, unpacked);
+        }
+    }
+
     private static void assertArrayUnpackedCorrectly(Object expected, Object actual) {
         assertNotNull("Actual array value is null", actual);
         if (expected instanceof int[]) {
-            assertThat(actual, CoreMatchers.instanceOf(int[].class));
-
-            //noinspection RedundantCast
+            assertThat(actual, instanceOf(int[].class));
             assertArrayEquals((int[]) expected, (int[]) actual);
+        } else if (expected instanceof double[]) {
+            assertThat(actual, instanceOf(double[].class));
+            assertArrayEquals((double[]) expected, (double[]) actual, 0.0);
         } else {
             throw new RuntimeException("Don't know how to verify " + expected);
         }

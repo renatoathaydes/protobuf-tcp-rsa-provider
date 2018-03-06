@@ -1,5 +1,7 @@
 package com.athaydes.protobuf.tcp.internal;
 
+import com.athaydes.protobuf.tcp.internal.Internal.DoubleArray;
+import com.athaydes.protobuf.tcp.internal.Internal.IntArray;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.ByteString;
@@ -9,10 +11,8 @@ import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.ListValue;
 import com.google.protobuf.Message;
 import com.google.protobuf.StringValue;
-import com.google.protobuf.Value;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -112,13 +112,25 @@ final class MethodInvocationResolver {
         });
 
         typeConverters_.put(int[].class, any -> {
-            List<Value> listValue = any.is(ListValue.class) ? any.unpack(ListValue.class).getValuesList() : null;
-            if (listValue == null) {
+            List<Integer> list = any.is(IntArray.class) ? any.unpack(IntArray.class).getArrayList() : null;
+            if (list == null) {
                 return null;
             }
-            int[] result = new int[listValue.size()];
+            int[] result = new int[list.size()];
             for (int i = 0; i < result.length; i++) {
-                result[i] = Double.valueOf(listValue.get(i).getNumberValue()).intValue();
+                result[i] = list.get(i);
+            }
+            return result;
+        });
+
+        typeConverters_.put(double[].class, any -> {
+            List<Double> list = any.is(DoubleArray.class) ? any.unpack(DoubleArray.class).getArrayList() : null;
+            if (list == null) {
+                return null;
+            }
+            double[] result = new double[list.size()];
+            for (int i = 0; i < result.length; i++) {
+                result[i] = list.get(i);
             }
             return result;
         });

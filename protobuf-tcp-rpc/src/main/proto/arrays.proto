@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package com.athaydes.protobuf.tcp.internal;
+
+option java_package = "com.athaydes.protobuf.tcp.internal";
+option java_outer_classname = "Internal";
+
+message IntArray {
+    repeated int32 array = 1;
+}
+
+message LongArray {
+    repeated int64 array = 1;
+}
+
+message DoubleArray {
+    repeated double array = 1;
+}
+
+message FloatArray {
+    repeated float array = 1;
+}
