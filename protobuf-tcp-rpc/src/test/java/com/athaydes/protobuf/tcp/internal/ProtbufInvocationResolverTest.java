@@ -96,10 +96,11 @@ public class ProtbufInvocationResolverTest {
 
     @Test
     public void canConvertArraysToMessageAndBack() {
+        byte[] javaByteArray = {3, 2, 1};
         int[] javaIntArray = {5, 4, 3, 2, 1};
         double[] javaDoubleArray = {5.2, 1.3};
 
-        for (Object javaValue : Arrays.asList(javaIntArray, javaDoubleArray)) {
+        for (Object javaValue : Arrays.asList(javaByteArray, javaIntArray, javaDoubleArray)) {
             Any message = ProtobufInvocationHandler.packedMessage(javaValue);
             Object unpacked = MethodInvocationResolver.tryConvert(message, javaValue.getClass());
             assertArrayUnpackedCorrectly(javaValue, unpacked);
@@ -108,7 +109,10 @@ public class ProtbufInvocationResolverTest {
 
     private static void assertArrayUnpackedCorrectly(Object expected, Object actual) {
         assertNotNull("Actual array value is null", actual);
-        if (expected instanceof int[]) {
+        if (expected instanceof byte[]) {
+            assertThat(actual, instanceOf(byte[].class));
+            assertArrayEquals((byte[]) expected, (byte[]) actual);
+        } else if (expected instanceof int[]) {
             assertThat(actual, instanceOf(int[].class));
             assertArrayEquals((int[]) expected, (int[]) actual);
         } else if (expected instanceof double[]) {

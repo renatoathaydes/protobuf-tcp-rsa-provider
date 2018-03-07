@@ -64,6 +64,13 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
                 Any.pack(DoubleValue.newBuilder().setValue((double) object).build()));
         packFunctions_.put(Byte.class, object ->
                 Any.pack(BytesValue.newBuilder().setValue(ByteString.copyFrom(new byte[]{(byte) object})).build()));
+        packFunctions_.put(byte[].class, object -> {
+            Internal.IntArray.Builder builder = Internal.IntArray.newBuilder();
+            for (int i : (byte[]) object) {
+                builder.addArray(i);
+            }
+            return Any.pack(builder.build());
+        });
         packFunctions_.put(int[].class, object -> {
             Internal.IntArray.Builder builder = Internal.IntArray.newBuilder();
             for (int i : (int[]) object) {
