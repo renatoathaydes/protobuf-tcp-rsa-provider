@@ -123,6 +123,14 @@ final class MethodInvocationResolver {
             return result;
         });
 
+        typeConverters_.put(char[].class, any -> {
+            String str = any.is(StringValue.class) ? any.unpack(StringValue.class).getValue() : null;
+            if (str == null) {
+                return null;
+            }
+            return str.toCharArray();
+        });
+
         typeConverters_.put(short[].class, any -> {
             List<Integer> list = any.is(IntArray.class) ? any.unpack(IntArray.class).getArrayList() : null;
             if (list == null) {

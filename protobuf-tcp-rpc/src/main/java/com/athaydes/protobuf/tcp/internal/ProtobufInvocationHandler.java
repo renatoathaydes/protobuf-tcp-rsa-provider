@@ -71,6 +71,11 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             }
             return Any.pack(builder.build());
         });
+        packFunctions_.put(char[].class, object -> {
+            StringValue.Builder builder = StringValue.newBuilder();
+            builder.setValue(new String((char[]) object));
+            return Any.pack(builder.build());
+        });
         packFunctions_.put(short[].class, object -> {
             Internal.IntArray.Builder builder = Internal.IntArray.newBuilder();
             for (int i : (short[]) object) {

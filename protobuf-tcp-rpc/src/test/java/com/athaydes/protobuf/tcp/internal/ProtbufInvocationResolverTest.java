@@ -97,11 +97,13 @@ public class ProtbufInvocationResolverTest {
     @Test
     public void canConvertArraysToMessageAndBack() {
         byte[] javaByteArray = {3, 2, 1};
+        char[] javaCharArray = {'a', 'b', 'c', 'd'};
         short[] javaShortArray = {10, 20};
         int[] javaIntArray = {5, 4, 3, 2, 1};
         double[] javaDoubleArray = {5.2, 1.3};
 
-        for (Object javaValue : Arrays.asList(javaByteArray, javaShortArray, javaIntArray, javaDoubleArray)) {
+        for (Object javaValue : Arrays.asList(
+                javaByteArray, javaCharArray, javaShortArray, javaIntArray, javaDoubleArray)) {
             Any message = ProtobufInvocationHandler.packedMessage(javaValue);
             Object unpacked = MethodInvocationResolver.tryConvert(message, javaValue.getClass());
             assertArrayUnpackedCorrectly(javaValue, unpacked);
@@ -116,6 +118,9 @@ public class ProtbufInvocationResolverTest {
         } else if (expected instanceof int[]) {
             assertThat(actual, instanceOf(int[].class));
             assertArrayEquals((int[]) expected, (int[]) actual);
+        } else if (expected instanceof char[]) {
+            assertThat(actual, instanceOf(char[].class));
+            assertArrayEquals((char[]) expected, (char[]) actual);
         } else if (expected instanceof short[]) {
             assertThat(actual, instanceOf(short[].class));
             assertArrayEquals((short[]) expected, (short[]) actual);
