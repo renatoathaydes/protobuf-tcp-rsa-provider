@@ -123,6 +123,18 @@ final class MethodInvocationResolver {
             return result;
         });
 
+        typeConverters_.put(short[].class, any -> {
+            List<Integer> list = any.is(IntArray.class) ? any.unpack(IntArray.class).getArrayList() : null;
+            if (list == null) {
+                return null;
+            }
+            short[] result = new short[list.size()];
+            for (int i = 0; i < result.length; i++) {
+                result[i] = list.get(i).shortValue();
+            }
+            return result;
+        });
+
         typeConverters_.put(int[].class, any -> {
             List<Integer> list = any.is(IntArray.class) ? any.unpack(IntArray.class).getArrayList() : null;
             if (list == null) {
