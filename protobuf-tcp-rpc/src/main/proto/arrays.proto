@@ -20,3 +20,7 @@ message DoubleArray {
 message FloatArray {
     repeated float array = 1;
 }
+
+message BooleanArray {
+    repeated bool array = 1;
+}

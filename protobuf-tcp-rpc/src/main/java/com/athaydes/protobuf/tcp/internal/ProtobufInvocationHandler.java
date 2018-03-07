@@ -4,6 +4,7 @@ import com.athaydes.protobuf.tcp.api.Api;
 import com.athaydes.protobuf.tcp.api.Api.MethodInvocation;
 import com.athaydes.protobuf.tcp.api.CommunicationException;
 import com.athaydes.protobuf.tcp.api.RemoteException;
+import com.athaydes.protobuf.tcp.internal.Internal.BooleanArray;
 import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.ByteString;
@@ -68,6 +69,13 @@ public class ProtobufInvocationHandler implements InvocationHandler, AutoCloseab
             Internal.IntArray.Builder builder = Internal.IntArray.newBuilder();
             for (int i : (byte[]) object) {
                 builder.addArray(i);
+            }
+            return Any.pack(builder.build());
+        });
+        packFunctions_.put(boolean[].class, object -> {
+            BooleanArray.Builder builder = BooleanArray.newBuilder();
+            for (boolean b : (boolean[]) object) {
+                builder.addArray(b);
             }
             return Any.pack(builder.build());
         });

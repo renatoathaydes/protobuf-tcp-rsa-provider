@@ -1,5 +1,6 @@
 package com.athaydes.protobuf.tcp.internal;
 
+import com.athaydes.protobuf.tcp.internal.Internal.BooleanArray;
 import com.athaydes.protobuf.tcp.internal.Internal.DoubleArray;
 import com.athaydes.protobuf.tcp.internal.Internal.IntArray;
 import com.google.protobuf.Any;
@@ -119,6 +120,18 @@ final class MethodInvocationResolver {
             byte[] result = new byte[list.size()];
             for (int i = 0; i < result.length; i++) {
                 result[i] = list.get(i).byteValue();
+            }
+            return result;
+        });
+
+        typeConverters_.put(boolean[].class, any -> {
+            List<Boolean> list = any.is(BooleanArray.class) ? any.unpack(BooleanArray.class).getArrayList() : null;
+            if (list == null) {
+                return null;
+            }
+            boolean[] result = new boolean[list.size()];
+            for (int i = 0; i < result.length; i++) {
+                result[i] = list.get(i);
             }
             return result;
         });
