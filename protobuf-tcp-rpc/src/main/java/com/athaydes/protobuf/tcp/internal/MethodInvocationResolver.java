@@ -2,6 +2,7 @@ package com.athaydes.protobuf.tcp.internal;
 
 import com.athaydes.protobuf.tcp.internal.Internal.BooleanArray;
 import com.athaydes.protobuf.tcp.internal.Internal.DoubleArray;
+import com.athaydes.protobuf.tcp.internal.Internal.FloatArray;
 import com.athaydes.protobuf.tcp.internal.Internal.IntArray;
 import com.athaydes.protobuf.tcp.internal.Internal.LongArray;
 import com.google.protobuf.Any;
@@ -175,6 +176,18 @@ final class MethodInvocationResolver {
                 return null;
             }
             long[] result = new long[list.size()];
+            for (int i = 0; i < result.length; i++) {
+                result[i] = list.get(i);
+            }
+            return result;
+        });
+
+        typeConverters_.put(float[].class, any -> {
+            List<Float> list = any.is(FloatArray.class) ? any.unpack(FloatArray.class).getArrayList() : null;
+            if (list == null) {
+                return null;
+            }
+            float[] result = new float[list.size()];
             for (int i = 0; i < result.length; i++) {
                 result[i] = list.get(i);
             }

@@ -102,11 +102,12 @@ public class ProtbufInvocationResolverTest {
         short[] javaShortArray = {10, 20};
         int[] javaIntArray = {5, 4, 3, 2, 1};
         long[] javaLongArray = {2L, 4L};
+        float[] javaFloatArray = {3.14f, 2.3f};
         double[] javaDoubleArray = {5.2, 1.3};
 
         for (Object javaValue : Arrays.asList(
                 javaByteArray, javaBoolArray, javaCharArray, javaShortArray, javaIntArray, javaDoubleArray,
-                javaLongArray)) {
+                javaLongArray, javaFloatArray)) {
             Any message = ProtobufInvocationHandler.packedMessage(javaValue);
             Object unpacked = MethodInvocationResolver.tryConvert(message, javaValue.getClass());
             assertArrayUnpackedCorrectly(javaValue, unpacked);
@@ -133,6 +134,9 @@ public class ProtbufInvocationResolverTest {
         } else if (expected instanceof long[]) {
             assertThat(actual, instanceOf(long[].class));
             assertArrayEquals((long[]) expected, (long[]) actual);
+        } else if (expected instanceof float[]) {
+            assertThat(actual, instanceOf(float[].class));
+            assertArrayEquals((float[]) expected, (float[]) actual, 0.0f);
         } else if (expected instanceof double[]) {
             assertThat(actual, instanceOf(double[].class));
             assertArrayEquals((double[]) expected, (double[]) actual, 0.0);
